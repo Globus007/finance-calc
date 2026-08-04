@@ -45,7 +45,7 @@ The monetary value of an Expense or Income, always in BYN. On commit it must be 
 _Avoid_: Sum, total (for a single record), value, price
 
 **Occurred on**:
-The calendar date the Expense or Income is attributed to (when the money moved for tracking purposes), not the moment it was committed.
+The calendar date the Expense or Income is attributed to (when the money moved for tracking purposes), not the moment it was committed. Product “today” (e.g. default when capture omits a date) is the calendar date in Europe/Minsk, not the device timezone.
 _Avoid_: Created at, timestamp, booked on, transaction date
 
 **Note**:
@@ -81,5 +81,5 @@ The single mixed list of committed Expenses and Incomes the user reviews and man
 _Avoid_: Feed, ledger, journal, transaction list, separate expense-only or income-only history (as the default concept)
 
 **Monthly total**:
-Aggregated totals for a calendar month over committed Expenses and Incomes: expense total, income total, and net (income total minus expense total). Net is a derived figure on Monthly total, not a separate domain entity. Drafts are excluded. Exact month bounds and timezone are defined elsewhere.
-_Avoid_: Balance (as the name for this concept), budget, report, statement
+Aggregated totals for one calendar month over committed Expenses and Incomes whose Occurred on falls in that month: expense total (sum of Expense Amounts), income total (sum of Income Amounts), and net (income total minus expense total). Net is a derived figure on Monthly total, not a separate domain entity. Drafts are excluded. Calendar month and “current month” use fixed Europe/Minsk. Totals are live: Edit or Delete of a committed record recalculates affected months immediately (no month-close snapshot). A month with no committed records is zeros; the current incomplete month uses the same live sum (so far), not a separate partial-month concept.
+_Avoid_: Balance (as the name for this concept), budget, report, statement, rolling total, closed month, snapshot total
