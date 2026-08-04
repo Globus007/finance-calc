@@ -57,16 +57,17 @@ How a Draft was produced: photo, voice, or manual. Set by the system at capture;
 _Avoid_: Source (for capture path), input method, modality, origin
 
 **Receipt**:
-The photo input used to extract an Expense Draft (vision). Expense-only; Income has no Receipt path. Ephemeral: not kept as a stored archive after extraction; only the resulting Draft fields matter for the domain. Multi-item receipts still yield one Expense Draft: Amount is the receipt grand total (not per-SKU lines).
-_Avoid_: Image, scan, ticket, invoice (as the name for this input), receipt gallery
+The photo input used to extract an Expense Draft (vision). Expense-only; Income has no Receipt path. Ephemeral: after an extraction attempt finishes (success or Extraction failure), the photo is not retained for later use—confirm holds only Draft fields; a failed attempt requires a new capture, not retry of the same photo. Multi-item receipts still yield one Expense Draft: Amount is the receipt grand total (not per-SKU lines).
+_Avoid_: Image, scan, ticket, invoice (as the name for this input), receipt gallery, retained receipt preview
 
 **Recording**:
-The voice audio input used to extract a Draft (speech-to-text then language extract). Ephemeral: not kept after extraction. If the utterance mentions several outflows or inflows, the Draft takes a single primary (first/most complete) prospective record; further captures are separate cycles.
-_Avoid_: Audio clip, voice note, utterance (as the domain name)
+The voice audio input used to extract a Draft (speech-to-text then language extract). Ephemeral: after an extraction attempt finishes (success or Extraction failure), the audio is not retained for later use—confirm holds only Draft fields; a failed attempt requires a new capture, not retry of the same recording. If the utterance mentions several outflows or inflows, the Draft takes a single primary (first/most complete) prospective record; further captures are separate cycles.
+_Avoid_: Audio clip, voice note, utterance (as the domain name), retained playback on confirm
 
 **Extraction failure**:
-When the capture pipeline cannot open a usable Draft (e.g. STT/vision/transport failure or unusable input). Distinct from an incomplete Draft (e.g. missing Amount after a successful pipeline run—confirm still opens so the user can fill fields), from Discard, and from Delete. Not a per-field confidence concept: MVP has no confidence flags on Draft fields.
+When the capture pipeline cannot open a usable Draft (e.g. STT/vision/transport failure or unusable input). Distinct from an incomplete Draft (e.g. missing Amount after a successful pipeline run—confirm still opens so the user can fill fields), from Discard, and from Delete. Not a per-field confidence concept: MVP has no confidence flags on Draft fields. Recovery is a new capture cycle, not reprocessing retained media.
 _Avoid_: Error (as the domain name), cancel, failed save, confidence flag (as a domain field)
+
 
 **Edit**:
 Changing fields of an already committed Expense or Income. Not a return to Draft.
