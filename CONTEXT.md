@@ -9,19 +9,19 @@ A money outflow the user records for personal tracking. First-class concept, not
 _Avoid_: Transaction, entry, payment, purchase, spending record
 
 **Income**:
-A money inflow the user records for personal tracking. First-class concept, separate from Expense; MVP keeps it deliberately simple. Created only via Draft → Commit (same lifecycle as Expense). A committed Income always has Amount and Occurred on; it has no Category.
-_Avoid_: Transaction, entry, earning, credit, deposit
+A money inflow the user records for personal tracking. First-class concept, separate from Expense; MVP keeps it deliberately simple. Created only via Draft → Commit (same lifecycle as Expense). Capture Channels for Income are voice and manual only—not photo. A committed Income always has Amount and Occurred on; it has no Category and no separate Source type—optional free-text context lives in Note; Channel may be present. MVP has no Transfer or Refund type—cashback/returns may be logged as Income at the user's judgment; own-account moves are out of scope.
+_Avoid_: Transaction, entry, earning, credit, deposit, Income category, Source (as a required or typed field), Transfer, Refund (as domain types)
 
 **Draft**:
-A not-yet-committed capture result (from photo, voice, or manual input) held for user confirmation. It targets either future Expense(s) or a future Income, never mixed; it is not a saved Expense/Income in a draft status. An Expense Draft holds one or more Lines; fields on Lines may be incomplete until the user can Commit. An Expense Draft with zero Lines cannot be committed—only discarded or given new Lines.
+A not-yet-committed capture result held for user confirmation. It targets either future Expense(s) or exactly one future Income, never mixed. Expense Drafts may come from photo, voice, or manual; Income Drafts only from voice or manual; photo always yields an Expense Draft. An Expense Draft holds one or more Lines (zero Lines → only Discard or add Lines); an Income Draft has no Lines—only the fields of that single prospective Income, which may be incomplete until Commit.
 _Avoid_: Pending expense, unsaved transaction, form state (as the domain name), temporary expense
 
 **Line**:
-A single prospective Expense inside an Expense Draft. Each Line has its own Amount, Occurred on, Category, and optional Note. The user may remove Lines from the Draft before Commit; Commit turns every remaining valid Line into one Expense. Line is not used for splitting rows already in History.
+A single prospective Expense inside an Expense Draft. Each Line has its own Amount, Occurred on, Category, and optional Note. The user may remove Lines from the Draft before Commit; Commit turns every remaining valid Line into one Expense. Line does not exist for Income Drafts and is not used for splitting rows already in History.
 _Avoid_: Item, position, split, partial expense, draft entry
 
 **Commit**:
-The user action that creates Expense(s) or Income from a confirmed Draft and ends that Draft. There is no partial Commit that leaves a residual Draft: what remains in the Draft is what Commit applies to. Only committed Expenses and Incomes appear in History and Monthly totals. For an Expense Draft, there must be at least one Line, and every remaining Line must have Amount, Occurred on, and Category (one Expense per Line). Income Commit requires Amount and Occurred on.
+The user action that creates Expense(s) or one Income from a confirmed Draft and ends that Draft. There is no partial Commit that leaves a residual Draft: what remains in the Draft is what Commit applies to. Only committed Expenses and Incomes appear in History and Monthly totals. For an Expense Draft, there must be at least one Line, and every remaining Line must have Amount, Occurred on, and Category (one Expense per Line). An Income Draft Commit creates exactly one Income and requires Amount and Occurred on.
 _Avoid_: Save (as the domain verb for this step), publish, finalize, post, sync
 
 **Discard**:
@@ -57,11 +57,11 @@ Optional free-text on an Expense or Income (merchant name, income source hint, c
 _Avoid_: Merchant (as a separate concept), Source (as a required field), description, comment, memo
 
 **Channel**:
-How a Draft was produced: photo, voice, or manual. Domain vocabulary for capture path; not required to Commit. Photo channel starts from a Receipt; voice channel starts from a Recording; manual has neither.
+How a Draft was produced: photo, voice, or manual. Domain vocabulary for capture path; not required to Commit. Photo is Expense-only and starts from a Receipt; voice starts from a Recording (Expense or Income); manual has neither and works for both.
 _Avoid_: Source (for capture path), input method, modality, origin
 
 **Receipt**:
-The photo input used to extract an Expense Draft (vision). Ephemeral: not kept as a stored archive after extraction; only the resulting Draft fields matter for the domain.
+The photo input used to extract an Expense Draft (vision). Expense-only; Income has no Receipt path. Ephemeral: not kept as a stored archive after extraction; only the resulting Draft fields matter for the domain.
 _Avoid_: Image, scan, ticket, invoice (as the name for this input), receipt gallery
 
 **Recording**:
@@ -81,9 +81,9 @@ Removing a committed Expense or Income entirely. Distinct from Discard (which on
 _Avoid_: Discard (for committed records), archive, void, soft-delete (as the domain verb)
 
 **History**:
-The list of committed Expenses and Incomes the user reviews and manages. Drafts never appear in History.
-_Avoid_: Feed, ledger, journal, transaction list
+The single mixed list of committed Expenses and Incomes the user reviews and manages, ordered by Occurred on. Drafts never appear in History.
+_Avoid_: Feed, ledger, journal, transaction list, separate expense-only or income-only history (as the default concept)
 
 **Monthly total**:
-Aggregated totals for a calendar month over committed Expenses and Incomes (at least expense total and income total). Drafts are excluded. Exact month bounds, timezone, and net presentation are defined elsewhere.
-_Avoid_: Balance, budget, report (as the name for this concept), statement
+Aggregated totals for a calendar month over committed Expenses and Incomes: expense total, income total, and net (income total minus expense total). Net is a derived figure on Monthly total, not a separate domain entity. Drafts are excluded. Exact month bounds and timezone are defined elsewhere.
+_Avoid_: Balance (as the name for this concept), budget, report, statement
