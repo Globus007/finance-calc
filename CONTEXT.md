@@ -29,8 +29,20 @@ The user action that abandons a whole Draft without creating an Expense or Incom
 _Avoid_: Cancel (for this action), abort, reject
 
 **Category**:
-A user-facing label for classifying an Expense. One concept for both the product seed set and user-defined labels (seed vs user-defined is a property, not two types). Applies only to Expenses in MVP, not to Income. Required on every committed Expense.
+A user-facing label for classifying an Expense. One concept for seed and user-defined (origin is a property, not two types); applies only to Expenses and is required on every committed Expense. Stable identity is separate from display name; display names are unique per user across visible and hidden Categories (case-insensitive). Seed Categories cannot be renamed or hard-deleted; user-defined may be renamed and may be hard-deleted only when no committed Expense uses them. Automatic classification maps only to the user's visible Categories and never creates Categories; a new manual Line starts with no Category until the user chooses one.
 _Avoid_: Tag, folder, budget line, expense type, Income category, Seed Category / Custom Category (as separate types)
+
+**System fallback Category**:
+The single seed Category used when automatic classification cannot choose a better visible Category. In MVP its display name is «Прочее»; it cannot be renamed, hidden, or deleted.
+_Avoid_: Other, uncategorized, none, catch-all (as a separate type from Category)
+
+**Hide**:
+The user action that omits a Category from the usual picker for new Draft Lines and from automatic mapping candidates. Committed Expenses keep that Category; History still shows it. Does not apply to the System fallback Category. Distinct from Delete.
+_Avoid_: Archive (as the domain verb), soft-delete, disable, remove
+
+**Unhide**:
+The user action that reverses Hide so the Category is available again for pickers and automatic mapping. When editing a committed Expense whose Category is hidden, that Category remains choosable as the current value alongside all visible Categories.
+_Avoid_: Restore, re-enable, unarchive (as the domain verb)
 
 **Amount**:
 The monetary value of an Expense or Income, always in BYN. On commit it must be greater than zero.
