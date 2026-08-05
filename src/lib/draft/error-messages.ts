@@ -9,7 +9,8 @@ type CommitActionError =
 
 const MESSAGES: Record<CommitActionError, string> = {
   amount_required: "Укажите сумму больше нуля.",
-  date_required: "Укажите дату.",
+  amount_too_large: "Сумма не больше 9 999 999 999,99.",
+  date_required: "Укажите корректную дату.",
   category_required: "Выберите категорию.",
   note_too_long: "Заметка не длиннее 500 символов.",
   invalid_channel_for_kind: "Недопустимый способ захвата для этой записи.",

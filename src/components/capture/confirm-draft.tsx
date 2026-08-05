@@ -16,10 +16,9 @@ type Props = {
   categories: CategoryPickerItem[];
   onDiscard: () => void;
   onCommitted: () => void;
-  /** Injectable for tests; defaults to server action. */
+  /** Injectable for tests; defaults to server action. Channel is server-set. */
   commitFn?: (input: {
     kind: Draft["kind"];
-    channel: Draft["channel"];
     amount: string;
     occurredOn: string;
     categoryId: string;
@@ -57,7 +56,6 @@ export function ConfirmDraft({
     startTransition(async () => {
       const result = await commitFn({
         kind: draft.kind,
-        channel: draft.channel,
         amount: draft.amount,
         occurredOn: draft.occurredOn,
         categoryId: draft.categoryId,

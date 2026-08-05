@@ -112,7 +112,7 @@ describe("ConfirmDraft", () => {
     expect(commitFn).not.toHaveBeenCalled();
   });
 
-  it("on Commit success notifies parent; Channel is always the Draft channel", async () => {
+  it("on Commit success notifies parent without sending Channel (server-set)", async () => {
     const user = userEvent.setup();
     const onCommitted = vi.fn();
     const commitFn = vi.fn().mockResolvedValue({ status: "ok", id: "e1" });
@@ -137,13 +137,13 @@ describe("ConfirmDraft", () => {
     await waitFor(() => {
       expect(commitFn).toHaveBeenCalledWith({
         kind: "expense",
-        channel: "manual",
         amount: "10",
         occurredOn: "2026-08-05",
         categoryId: "cat-products",
         note: "",
       });
     });
+    expect(commitFn.mock.calls[0][0]).not.toHaveProperty("channel");
     await waitFor(() => expect(onCommitted).toHaveBeenCalledOnce());
   });
 

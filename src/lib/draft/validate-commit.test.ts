@@ -69,6 +69,36 @@ describe("validateCommit", () => {
     });
   });
 
+  it("rejects calendar-impossible Occurred on", () => {
+    expect(validateCommit(expense({ occurredOn: "2026-02-30" }))).toEqual({
+      ok: false,
+      reason: "date_required",
+    });
+    expect(validateCommit(income({ occurredOn: "2025-02-29" }))).toEqual({
+      ok: false,
+      reason: "date_required",
+    });
+    expect(validateCommit(expense({ occurredOn: "2026-13-01" }))).toEqual({
+      ok: false,
+      reason: "date_required",
+    });
+    // Leap day is valid
+    expect(validateCommit(expense({ occurredOn: "2024-02-29" })).ok).toBe(true);
+  });
+
+  it("rejects Amount above numeric(12,2) ceiling", () => {
+    expect(validateCommit(expense({ amount: "10000000000" }))).toEqual({
+      ok: false,
+      reason: "amount_too_large",
+    });
+    expect(validateCommit(income({ amount: "9999999999.99" })).ok).toBe(true);
+    // Rounds half-up past the ceiling
+    expect(validateCommit(expense({ amount: "9999999999.995" }))).toEqual({
+      ok: false,
+      reason: "amount_too_large",
+    });
+  });
+
   it("requires Category only for Expense", () => {
     expect(validateCommit(expense({ categoryId: "" }))).toEqual({
       ok: false,
