@@ -5,20 +5,25 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
 import { loadPickerCategories } from "@/app/(app)/capture/actions";
 import type { CategoryPickerItem } from "@/lib/categories/types";
+import type { PhotoPreCaptureReason } from "@/lib/capture/messages";
+import { runPhotoPipeline } from "@/lib/capture/run-photo-pipeline";
 import { createManualDraft } from "@/lib/draft/create-manual-draft";
 import type { Draft, RecordKind } from "@/lib/draft/types";
 import { ConfirmDraft } from "./confirm-draft";
 import { ManualTypePicker } from "./manual-type-picker";
+import { PhotoShell, type PhotoShellMode } from "./photo-shell";
 
 type CapturePhase =
   | { name: "idle" }
   | { name: "manual-type" }
+  | { name: "photo"; shell: PhotoShellMode; autoOpen: boolean }
   | {
       name: "confirm";
       draft: Draft;
@@ -27,6 +32,7 @@ type CapturePhase =
 
 type CaptureContextValue = {
   openManual: () => void;
+  openPhoto: () => void;
   isCaptureOpen: boolean;
   phase: CapturePhase;
   loadError: string | null;
@@ -34,6 +40,10 @@ type CaptureContextValue = {
   pickManualKind: (kind: RecordKind) => void;
   discard: () => void;
   onCommitted: () => void;
+  onPhotoFile: (file: File) => void;
+  cancelPhotoProgress: () => void;
+  recapturePhoto: () => void;
+  setPhotoPreError: (reason: PhotoPreCaptureReason) => void;
 };
 
 const CaptureContext = createContext<CaptureContextValue | null>(null);
@@ -47,23 +57,39 @@ export function useCapture(): CaptureContextValue {
 }
 
 /**
- * Shell-level manual capture state: type pick → confirm → Commit | Discard.
- * Photo/voice pipelines arrive later on the same host.
+ * Shell-level capture: photo pipeline + manual type pick → confirm.
+ * Voice arrives later on the same host.
  */
 export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [phase, setPhase] = useState<CapturePhase>({ name: "idle" });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isOpeningConfirm, startOpenConfirm] = useTransition();
+  const abortRef = useRef<AbortController | null>(null);
 
   const discard = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setLoadError(null);
     setPhase({ name: "idle" });
   }, []);
 
   const openManual = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
     setLoadError(null);
     setPhase({ name: "manual-type" });
+  }, []);
+
+  const openPhoto = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoadError(null);
+    setPhase({
+      name: "photo",
+      shell: { name: "pick" },
+      autoOpen: true,
+    });
   }, []);
 
   const pickManualKind = useCallback((kind: RecordKind) => {
@@ -108,9 +134,88 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     router.refresh();
   }, [router]);
 
+  const cancelPhotoProgress = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    // Cancel is not Extraction failure (ADR-0008) — back to idle.
+    setPhase({ name: "idle" });
+  }, []);
+
+  const recapturePhoto = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPhase({
+      name: "photo",
+      shell: { name: "pick" },
+      autoOpen: true,
+    });
+  }, []);
+
+  const setPhotoPreError = useCallback((reason: PhotoPreCaptureReason) => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPhase({
+      name: "photo",
+      shell: { name: "pre-error", reason },
+      autoOpen: false,
+    });
+  }, []);
+
+  const onPhotoFile = useCallback(async (file: File) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setPhase({
+      name: "photo",
+      shell: { name: "progress" },
+      autoOpen: false,
+    });
+
+    const result = await runPhotoPipeline(file, { signal: controller.signal });
+
+    if (controller.signal.aborted || result.status === "cancelled") {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setPhase({ name: "idle" });
+      }
+      return;
+    }
+
+    abortRef.current = null;
+
+    if (result.status === "ok") {
+      setPhase({
+        name: "confirm",
+        draft: result.draft,
+        categories: result.categories,
+      });
+      return;
+    }
+
+    if (result.status === "pre-capture") {
+      setPhase({
+        name: "photo",
+        shell: {
+          name: "pre-error",
+          reason: result.reason as PhotoPreCaptureReason,
+        },
+        autoOpen: false,
+      });
+      return;
+    }
+
+    setPhase({
+      name: "photo",
+      shell: { name: "extract-fail" },
+      autoOpen: false,
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       openManual,
+      openPhoto,
       isCaptureOpen: phase.name !== "idle",
       phase,
       loadError,
@@ -118,15 +223,24 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       pickManualKind,
       discard,
       onCommitted,
+      onPhotoFile,
+      cancelPhotoProgress,
+      recapturePhoto,
+      setPhotoPreError,
     }),
     [
       openManual,
+      openPhoto,
       phase,
       loadError,
       isOpeningConfirm,
       pickManualKind,
       discard,
       onCommitted,
+      onPhotoFile,
+      cancelPhotoProgress,
+      recapturePhoto,
+      setPhotoPreError,
     ],
   );
 
@@ -144,6 +258,10 @@ export function CaptureLayer() {
     pickManualKind,
     discard,
     onCommitted,
+    onPhotoFile,
+    cancelPhotoProgress,
+    recapturePhoto,
+    setPhotoPreError,
   } = useCapture();
 
   if (phase.name === "idle") return null;
@@ -165,6 +283,24 @@ export function CaptureLayer() {
           <ManualTypePicker onPick={pickManualKind} onDismiss={discard} />
         )
       ) : null}
+
+      {phase.name === "photo" ? (
+        <PhotoShell
+          mode={phase.shell}
+          autoOpenCapture={phase.autoOpen}
+          onFile={onPhotoFile}
+          onCancelProgress={cancelPhotoProgress}
+          onRecapture={recapturePhoto}
+          onDismiss={discard}
+          onPermissionDenied={() => {
+            setPhotoPreError("permission");
+          }}
+          onCaptureUnavailable={() => {
+            setPhotoPreError("unavailable");
+          }}
+        />
+      ) : null}
+
       {phase.name === "confirm" ? (
         <>
           {loadError !== null ? (
