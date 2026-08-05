@@ -38,6 +38,7 @@ export type CommitDraftInput = {
 function revalidateMoneySurfaces() {
   revalidatePath("/");
   revalidatePath("/month");
+  revalidatePath("/history");
 }
 
 /** server-auth-actions: always verify session inside the action. */
