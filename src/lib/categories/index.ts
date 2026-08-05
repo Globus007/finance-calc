@@ -1,3 +1,6 @@
+/** Server-oriented re-exports. Client components should import modules directly
+ * (bundle-barrel-imports) to keep the client graph small. */
+
 export {
   isBlankDisplayName,
   isDuplicateDisplayName,
@@ -19,4 +22,8 @@ export {
   type CategoryDbRow,
 } from "./map-row";
 export { sortCategoriesForManage } from "./sort-categories";
-export type { CategoryListItem, CategoryOrigin, CategoryRow } from "./types";
+export type {
+  CategoryManageItem,
+  CategoryOrigin,
+  CategoryRow,
+} from "./types";

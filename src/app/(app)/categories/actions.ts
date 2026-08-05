@@ -1,14 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { normalizeDisplayName } from "@/lib/categories/display-name";
 import {
-  mapCategoryRow,
-  normalizeDisplayName,
   validateCategoryMutation,
-  type CategoryRow,
   type MutationRejection,
-} from "@/lib/categories";
-import { CATEGORY_SELECT } from "@/lib/categories/map-row";
+} from "@/lib/categories/lifecycle";
+import { mapCategoryRow, CATEGORY_SELECT } from "@/lib/categories/map-row";
+import type { CategoryRow } from "@/lib/categories/types";
 import { createClient } from "@/lib/supabase/server";
 
 export type CategoryActionResult =
@@ -22,6 +21,9 @@ export type CategoryActionResult =
         | "unavailable";
     };
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/** server-auth-actions: always verify session inside the action. */
 async function requireUser() {
   const supabase = await createClient();
   const {
@@ -34,7 +36,7 @@ async function requireUser() {
 }
 
 async function loadCategory(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Supabase,
   id: string,
 ): Promise<CategoryRow | null> {
   const { data, error } = await supabase
@@ -48,7 +50,7 @@ async function loadCategory(
 }
 
 async function loadExistingNames(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Supabase,
 ): Promise<{ id: string; displayName: string }[]> {
   const { data, error } = await supabase
     .from("categories")
@@ -61,7 +63,7 @@ async function loadExistingNames(
 }
 
 async function isCategoryInUse(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Supabase,
   categoryId: string,
 ): Promise<boolean> {
   const { count, error } = await supabase
@@ -80,6 +82,15 @@ function revalidateCategories() {
 export async function createCategory(
   displayName: string,
 ): Promise<CategoryActionResult> {
+  // async-defer-await: cheap validation before any I/O past auth
+  const blankCheck = validateCategoryMutation(null, {
+    type: "create",
+    displayName,
+  });
+  if (!blankCheck.ok && blankCheck.reason === "invalid_name") {
+    return { status: "error", reason: "invalid_name" };
+  }
+
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
 
@@ -117,13 +128,24 @@ export async function renameCategory(
   id: string,
   displayName: string,
 ): Promise<CategoryActionResult> {
+  const blankCheck = validateCategoryMutation(null, {
+    type: "create",
+    displayName,
+  });
+  if (!blankCheck.ok && blankCheck.reason === "invalid_name") {
+    return { status: "error", reason: "invalid_name" };
+  }
+
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
 
-  const category = await loadCategory(supabase, id);
+  // async-parallel: category row + existing names are independent after auth
+  const [category, existing] = await Promise.all([
+    loadCategory(supabase, id),
+    loadExistingNames(supabase),
+  ]);
   if (!category) return { status: "error", reason: "not_found" };
 
-  const existing = await loadExistingNames(supabase);
   const check = validateCategoryMutation(
     category,
     { type: "rename", displayName },
@@ -182,6 +204,20 @@ export async function deleteCategory(
 
   const category = await loadCategory(supabase, id);
   if (!category) return { status: "error", reason: "not_found" };
+
+  // async-defer-await: seed/fallback reject without a usage count round-trip
+  const policyOnly = validateCategoryMutation(
+    category,
+    { type: "delete" },
+    { isInUse: false },
+  );
+  if (
+    !policyOnly.ok &&
+    (policyOnly.reason === "forbidden_seed" ||
+      policyOnly.reason === "forbidden_system_fallback")
+  ) {
+    return { status: "error", reason: policyOnly.reason };
+  }
 
   const isInUse = await isCategoryInUse(supabase, id);
   const check = validateCategoryMutation(

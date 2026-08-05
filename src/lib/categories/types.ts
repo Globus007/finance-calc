@@ -12,5 +12,21 @@ export type CategoryRow = {
   seedKey: string | null;
 };
 
-/** Category row plus usage flag for manage UI (hard-delete gate). */
-export type CategoryListItem = CategoryRow & { isInUse: boolean };
+/**
+ * RSC → client manage list item.
+ * Only fields the UI uses (no seedKey/sortOrder) + precomputed action caps
+ * so the client does not re-run lifecycle policy.
+ */
+export type CategoryManageItem = {
+  id: string;
+  displayName: string;
+  origin: CategoryOrigin;
+  isSystemFallback: boolean;
+  isHidden: boolean;
+  isInUse: boolean;
+  canHide: boolean;
+  canUnhide: boolean;
+  canRename: boolean;
+  canDelete: boolean;
+};
+
