@@ -27,5 +27,6 @@ export { sortCategoriesForManage } from "./sort-categories";
 export type {
   CategoryManageItem,
   CategoryOrigin,
+  CategoryPickerItem,
   CategoryRow,
 } from "./types";
