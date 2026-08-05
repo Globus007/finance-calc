@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(15);
 
 -- ---------------------------------------------------------------------------
 -- Bucket configuration
@@ -102,7 +102,7 @@ select ok(
 -- Must delete via Storage HTTP API (backend bytes), not SQL-only metadata rows.
 select ok(
   (
-    select pg_get_functiondef(p.oid) ilike '%http_delete%'
+    select pg_get_functiondef(p.oid) ilike '%extensions.http%'
       and pg_get_functiondef(p.oid) ilike '%prefixes%'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
@@ -110,7 +110,7 @@ select ok(
       and p.proname = 'cleanup_capture_temp_orphans'
     limit 1
   ),
-  'cleanup uses Storage API http_delete with prefixes body'
+  'cleanup uses synchronous extensions.http Storage API with prefixes body'
 );
 
 select ok(
@@ -123,6 +123,35 @@ select ok(
     limit 1
   ),
   'cleanup does not SQL-delete storage.objects rows directly'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ilike '%v_resp.status%'
+      or (
+        pg_get_functiondef(p.oid) ilike '%status%'
+        and pg_get_functiondef(p.oid) ilike '%HTTP %'
+      )
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'cleanup_capture_temp_orphans'
+    limit 1
+  ),
+  'cleanup checks Storage API HTTP status before reporting success'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ilike '%still present%'
+      or pg_get_functiondef(p.oid) ilike '%v_remaining%'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'cleanup_capture_temp_orphans'
+    limit 1
+  ),
+  'cleanup verifies storage.objects rows are gone after API delete'
 );
 
 select has_function(

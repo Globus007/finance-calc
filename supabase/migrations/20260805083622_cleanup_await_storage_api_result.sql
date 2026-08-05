@@ -1,78 +1,9 @@
--- ADR-0005 orphan TTL must delete Storage *bytes*, not only storage.objects rows.
--- Direct SQL DELETE leaves orphans in the object backend (S3 / file store).
--- Cleanup calls the Storage HTTP API synchronously via the http extension
--- (pg_net is async and only runs after COMMIT — await in-function would hang).
+-- Require Storage API success for capture-temp orphan TTL.
+-- Replaces enqueue-only pg_net cleanup (async after COMMIT — could not verify result
+-- in-function) with synchronous extensions.http + row presence check.
 
 create extension if not exists http with schema extensions;
 
--- ---------------------------------------------------------------------------
--- One-time / rotate credentials for the cleanup job (Vault)
--- ---------------------------------------------------------------------------
--- Local (from inside Postgres):  p_supabase_url = 'http://kong:8000'
--- Hosted:                        p_supabase_url = 'https://<project-ref>.supabase.co'
-create or replace function public.configure_capture_temp_cleanup(
-  p_supabase_url text,
-  p_service_role_key text
-)
-returns void
-language plpgsql
-security definer
-set search_path = public, vault
-as $$
-declare
-  v_url text := rtrim(trim(p_supabase_url), '/');
-  v_key text := trim(p_service_role_key);
-  v_id uuid;
-begin
-  if v_url is null or v_url = '' then
-    raise exception 'configure_capture_temp_cleanup: supabase url is required';
-  end if;
-  if v_key is null or v_key = '' then
-    raise exception 'configure_capture_temp_cleanup: service role key is required';
-  end if;
-
-  select s.id into v_id
-  from vault.secrets s
-  where s.name = 'capture_temp_supabase_url'
-  limit 1;
-
-  if v_id is null then
-    perform vault.create_secret(
-      v_url,
-      'capture_temp_supabase_url',
-      'Base URL for capture-temp Storage API orphan cleanup'
-    );
-  else
-    perform vault.update_secret(v_id, v_url);
-  end if;
-
-  select s.id into v_id
-  from vault.secrets s
-  where s.name = 'capture_temp_service_role_key'
-  limit 1;
-
-  if v_id is null then
-    perform vault.create_secret(
-      v_key,
-      'capture_temp_service_role_key',
-      'Service role key for capture-temp Storage API orphan cleanup'
-    );
-  else
-    perform vault.update_secret(v_id, v_key);
-  end if;
-end;
-$$;
-
-comment on function public.configure_capture_temp_cleanup(text, text) is
-  'Stores Supabase URL + service_role key in Vault for capture-temp Storage API cleanup.';
-
-revoke all on function public.configure_capture_temp_cleanup(text, text) from public;
-grant execute on function public.configure_capture_temp_cleanup(text, text) to service_role;
-grant execute on function public.configure_capture_temp_cleanup(text, text) to postgres;
-
--- ---------------------------------------------------------------------------
--- Orphan cleanup via Storage API (bytes + metadata)
--- ---------------------------------------------------------------------------
 create or replace function public.cleanup_capture_temp_orphans(
   p_max_age interval default interval '1 hour',
   p_limit integer default 500
@@ -122,7 +53,6 @@ begin
   end if;
 
   -- Storage multi-delete: DELETE /storage/v1/object/{bucket} body {"prefixes":[...]}
-  -- Synchronous call so we can observe HTTP status in this transaction.
   v_resp := extensions.http(
     (
       'DELETE',
@@ -144,7 +74,6 @@ begin
       left(coalesce(v_resp.content, ''), 500);
   end if;
 
-  -- Confirm metadata rows are gone; if any remain, TTL cleanup did not succeed.
   select count(*)::integer into v_remaining
   from storage.objects o
   where o.bucket_id = 'capture-temp'
