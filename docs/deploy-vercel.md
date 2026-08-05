@@ -88,21 +88,38 @@ App-side: `resolvePublicOrigin` prefers the non-local request host / Vercel URL 
 pnpm dlx vercel@latest deploy --prod --yes -S globus-projects-634fd0d3
 ```
 
+## PWA (install + capture constraints)
+
+Production is **HTTPS** on Vercel — required for camera/mic (`getUserMedia` is secure-context only). No service worker and **no offline capture queue** (online-first MVP).
+
+| Item | Notes |
+|------|--------|
+| Manifest | `/manifest.webmanifest` via `src/app/manifest.ts` (`display: standalone`, `start_url: /`) |
+| Icons | `public/icon-192.png`, `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png` |
+| Install | Mobile Safari / Chrome: Add to Home Screen / Install app |
+| Auth in installed PWA | **Primary:** 6-digit email OTP entered **in the PWA** (same cookie jar). Magic link is secondary — opening email in Safari does not share cookies with the home-screen app. |
+| Capture pre-errors | Offline before upload, permission denied, insecure context → inline shell messages (ADR-0008), not silent fail |
+
+Supabase Auth email template should expose the **OTP token** (`{{ .Token }}`) so users can type the code on `/login`. Link (`{{ .ConfirmationURL }}`) can remain for desktop/browser secondary path.
+
 ## Smoke checklist (definition of done)
 
 On `https://finance-calc-inky.vercel.app`:
 
 1. Open `/` → redirect to `/login`  
-2. Request magic link → email → open link → session cookie → `/`  
-3. Home / Month / History load for the signed-in user  
-4. Manual expense: draft → commit appears in History / monthly total  
-5. Photo capture → extract → confirm → commit  
-6. Logout  
+2. Request OTP → email → enter **6-digit code in the app** → session cookie → `/`  
+3. (Optional secondary) Open magic link in the **same** browser → `/auth/confirm` → `/`  
+4. Home / Month / History load for the signed-in user  
+5. Manual expense: draft → commit appears in History / monthly total  
+6. Photo / voice capture → extract → confirm → commit (HTTPS + permissions)  
+7. Install to home screen → reopen → still authenticated (cookie session)  
+8. Logout  
 
 Automated HTTP checks (no auth):
 
 - `GET /` → 307 → `/login`  
 - `GET /login` → 200  
+- `GET /manifest.webmanifest` → 200 (JSON name/icons/`start_url`)  
 - `GET /month` (unauthenticated) → ends on `/login`
 
 ## Preview caveats

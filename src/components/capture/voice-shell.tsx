@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isCaptureSecureContext } from "@/lib/capture/constraints";
 import {
   VOICE_CANCEL_LABEL,
   VOICE_EXTRACTION_FAILURE,
@@ -139,7 +140,7 @@ export function VoiceShell({
     if (startingRef.current || recorderRef.current) return;
     startingRef.current = true;
 
-    if (typeof window !== "undefined" && !window.isSecureContext) {
+    if (!isCaptureSecureContext()) {
       startingRef.current = false;
       onInsecureContext?.();
       return;

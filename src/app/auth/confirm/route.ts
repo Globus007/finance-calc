@@ -4,11 +4,12 @@ import { resolvePostAuthPath } from "@/lib/auth/site-url";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Magic-link landing (primary auth for default Supabase email templates).
+ * Magic-link landing (secondary auth path).
  *
- * Handles both:
+ * Preferred for installed PWA: 6-digit OTP entered on /login (same cookie jar).
+ * This route remains for users who open the email link in the same browser:
  * - PKCE: ?code=… (default ConfirmationURL → redirect_to)
- * - token_hash: ?token_hash=…&type=… (custom template / secondary)
+ * - token_hash: ?token_hash=…&type=… (custom template)
  *
  * Session cookies are set via @supabase/ssr createServerClient.
  */

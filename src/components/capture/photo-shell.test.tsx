@@ -91,4 +91,26 @@ describe("PhotoShell", () => {
       screen.getByText(PHOTO_PRE_CAPTURE_MESSAGES.offline.body),
     ).toBeInTheDocument();
   });
+
+  it("shows pre-capture insecure (HTTPS) message with gallery CTA", () => {
+    render(
+      <PhotoShell
+        mode={{ name: "pre-error", reason: "insecure" }}
+        onFile={vi.fn()}
+        onCancelProgress={vi.fn()}
+        onRecapture={vi.fn()}
+        onDismiss={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: PHOTO_PRE_CAPTURE_MESSAGES.insecure.title,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: PHOTO_PRE_CAPTURE_MESSAGES.insecure.primaryCta,
+      }),
+    ).toBeInTheDocument();
+  });
 });

@@ -8,6 +8,7 @@ import type { CategoryPickerItem } from "@/lib/categories/types";
 import type { Draft } from "@/lib/draft/types";
 import { createClient } from "@/lib/supabase/client";
 import { compressReceiptImage } from "./compress-image";
+import { isCaptureOnline } from "./constraints";
 import type { PhotoPreCaptureReason } from "./messages";
 import { CAPTURE_TEMP_BUCKET } from "./photo-limits";
 
@@ -53,7 +54,7 @@ export async function runPhotoPipeline(
   const createUpload = deps.createUpload ?? createPhotoUpload;
   const extract = deps.extract ?? extractPhotoDraft;
   const deleteTemp = deps.deleteTemp ?? deleteCaptureTempObject;
-  const isOnline = deps.isOnline ?? (() => navigator.onLine);
+  const isOnline = deps.isOnline ?? (() => isCaptureOnline());
   const uploadBlob = deps.uploadBlob ?? defaultUpload;
 
   let uploadedPath: string | null = null;

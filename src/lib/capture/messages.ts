@@ -8,7 +8,8 @@ export type PhotoPreCaptureReason =
   | "type"
   | "size"
   | "offline"
-  | "unavailable";
+  | "unavailable"
+  | "insecure";
 
 export const PHOTO_PRE_CAPTURE_MESSAGES: Record<
   PhotoPreCaptureReason,
@@ -37,6 +38,11 @@ export const PHOTO_PRE_CAPTURE_MESSAGES: Record<
   unavailable: {
     title: "Камера недоступна",
     body: "Не удалось открыть камеру на этом устройстве. Выберите фото из галереи.",
+    primaryCta: "Выбрать фото",
+  },
+  insecure: {
+    title: "Нужен безопасный сайт",
+    body: "Камера работает только по HTTPS (или localhost). Можно выбрать фото из галереи.",
     primaryCta: "Выбрать фото",
   },
 };
