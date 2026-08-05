@@ -56,12 +56,19 @@ if [[ -z "$URL" ]]; then
 fi
 
 # Prefer PostgREST RPC (works without direct DB DNS); service_role only.
+BODY="$(
+  URL="$URL" SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" python3 -c \
+    'import json,os; print(json.dumps({
+      "p_supabase_url": os.environ["URL"],
+      "p_service_role_key": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+    }))'
+)"
+
 curl -sS -f -X POST "${URL}/rest/v1/rpc/configure_capture_temp_cleanup" \
   -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
   -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
   -H "Content-Type: application/json" \
-  -d "$(python3 -c 'import json,os; print(json.dumps({"p_supabase_url":os.environ["URL"],"p_service_role_key":os.environ["SUPABASE_SERVICE_ROLE_KEY"]}))' \
-    URL="$URL" SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY")" \
+  -d "$BODY" \
   >/dev/null
 
 echo "Configured remote capture-temp cleanup → ${URL}"
