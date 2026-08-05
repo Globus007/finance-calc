@@ -120,4 +120,30 @@ describe("runPhotoPipeline", () => {
     });
     expect(result).toEqual({ status: "extraction_failure" });
   });
+
+  it("deletes temp object when extract rejects after upload", async () => {
+    const deleteTemp = vi.fn(async () => ({ status: "ok" as const }));
+    const result = await runPhotoPipeline(makeFile(), {
+      deps: {
+        isOnline: () => true,
+        compress: async () => ({
+          ok: true,
+          blob: new Blob([new Uint8Array([1])], { type: "image/jpeg" }),
+          mime: "image/jpeg",
+        }),
+        createUpload: async () => ({
+          status: "ok",
+          path: "user/id.jpg",
+          token: "tok",
+        }),
+        uploadBlob: async () => ({ error: null }),
+        extract: async () => {
+          throw new Error("network");
+        },
+        deleteTemp,
+      },
+    });
+    expect(result).toEqual({ status: "extraction_failure" });
+    expect(deleteTemp).toHaveBeenCalledWith({ path: "user/id.jpg" });
+  });
 });

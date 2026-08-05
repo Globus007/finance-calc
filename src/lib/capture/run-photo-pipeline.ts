@@ -124,6 +124,8 @@ export async function runPhotoPipeline(
   try {
     extractResult = await extract({ path: uploadSlot.path });
   } catch {
+    // Extract may never have run (network/throw); drop temp object client-side.
+    await deleteTemp({ path: uploadSlot.path }).catch(() => undefined);
     return { status: "extraction_failure" };
   }
 
