@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useCapture } from "@/components/capture/capture-flow";
 import { IconCamera, IconChart, IconHome, IconMic, IconPen } from "./icons";
 
 /** Hoisted static icons — avoid re-creating element trees each render. */
@@ -13,10 +14,11 @@ const PEN_ICON = <IconPen size={20} />;
 
 /**
  * Home chrome bottom bar: Домой | photo · big mic · manual | Месяц.
- * Capture actions are stubs until later tickets wire pipelines.
+ * Manual opens Draft capture; photo/voice stay stubs until later tickets.
  */
 export function BottomNav() {
   const pathname = usePathname();
+  const { openManual, isCaptureOpen } = useCapture();
   const onHome = pathname === "/";
   const onMonth = pathname === "/month" || pathname.startsWith("/month/");
 
@@ -24,6 +26,8 @@ export function BottomNav() {
     <nav
       className="relative z-10 border-t border-white/60 bg-white/90 px-2 pb-3 pt-2 backdrop-blur-md"
       aria-label="Основная навигация"
+      // Hide dock chrome under full-screen capture so confirm is uncluttered.
+      hidden={isCaptureOpen}
     >
       <div className="mx-auto grid max-w-lg grid-cols-[1fr_auto_1fr] items-end gap-1">
         <NavTab href="/" active={onHome} label="Домой" icon={HOME_ICON} />
@@ -53,10 +57,9 @@ export function BottomNav() {
           </button>
           <button
             type="button"
+            onClick={openManual}
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[#A78BFA] transition hover:bg-[#F5F3FF] active:scale-95"
             aria-label="Вручную"
-            disabled
-            title="Скоро"
           >
             {PEN_ICON}
           </button>

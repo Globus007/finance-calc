@@ -30,3 +30,9 @@ export type CategoryManageItem = {
   canDelete: boolean;
 };
 
+/** Visible Category option for Expense Draft picker (stable id + display name). */
+export type CategoryPickerItem = {
+  id: string;
+  displayName: string;
+};
+
