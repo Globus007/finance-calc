@@ -14,11 +14,11 @@ const PEN_ICON = <IconPen size={20} />;
 
 /**
  * Home chrome bottom bar: Домой | photo · big mic · manual | Месяц.
- * Photo and manual open capture; voice stays stub until later ticket.
+ * Voice is the primary dock affordance (issue #28).
  */
 export function BottomNav() {
   const pathname = usePathname();
-  const { openManual, openPhoto, isCaptureOpen } = useCapture();
+  const { openManual, openPhoto, openVoice, isCaptureOpen } = useCapture();
   const onHome = pathname === "/";
   const onMonth = pathname === "/month" || pathname.startsWith("/month/");
 
@@ -47,10 +47,9 @@ export function BottomNav() {
           </button>
           <button
             type="button"
-            className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-[#5B6CFF] to-[#4338CA] text-white shadow-lg shadow-[#5B6CFF]/40 transition active:scale-95 disabled:opacity-90"
+            onClick={openVoice}
+            className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-[#5B6CFF] to-[#4338CA] text-white shadow-lg shadow-[#5B6CFF]/40 transition active:scale-95"
             aria-label="Голосовая запись"
-            disabled
-            title="Скоро"
           >
             {MIC_ICON}
           </button>

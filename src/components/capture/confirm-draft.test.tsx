@@ -178,4 +178,135 @@ describe("ConfirmDraft", () => {
     expect(screen.getByLabelText(/Сумма/i)).toHaveValue("200");
     expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
   });
+
+  it("voice: shows kind switch; Expense→Income drops Category", async () => {
+    const user = userEvent.setup();
+    const draft = {
+      kind: "expense" as const,
+      channel: "voice" as const,
+      amount: "30",
+      occurredOn: "2026-08-05",
+      categoryId: "cat-products",
+      note: "кофе",
+    };
+
+    render(
+      <ConfirmDraft
+        initialDraft={draft}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Расход" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByLabelText(/Категория/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Доход" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Подтверждение дохода" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Категория/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Сумма/i)).toHaveValue("30");
+    expect(screen.getByLabelText(/Заметка/i)).toHaveValue("кофе");
+    // Income Commit needs no Category
+    expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+  });
+
+  it("voice: Income→Expense requires Category again", async () => {
+    const user = userEvent.setup();
+    const draft = {
+      kind: "income" as const,
+      channel: "voice" as const,
+      amount: "100",
+      occurredOn: "2026-08-05",
+      categoryId: "",
+      note: "зарплата",
+    };
+
+    render(
+      <ConfirmDraft
+        initialDraft={draft}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Расход" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Подтверждение расхода" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Категория/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText(/Категория/i), "cat-other");
+    expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
+  });
+
+  it("manual and photo do not show kind switch", () => {
+    const { unmount } = render(
+      <ConfirmDraft
+        initialDraft={createManualDraft(
+          "expense",
+          new Date("2026-08-05T09:00:00.000Z"),
+        )}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Доход" })).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <ConfirmDraft
+        initialDraft={{
+          kind: "expense",
+          channel: "photo",
+          amount: "10",
+          occurredOn: "2026-08-05",
+          categoryId: "cat-other",
+          note: "",
+        }}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Доход" })).not.toBeInTheDocument();
+  });
+});
+
+describe("switchDraftKind", () => {
+  it("is a pure ADR-0002 transform", async () => {
+    const { switchDraftKind } = await import("./confirm-draft");
+    const base = {
+      kind: "expense" as const,
+      channel: "voice" as const,
+      amount: "12",
+      occurredOn: "2026-08-05",
+      categoryId: "cat-1",
+      note: "x",
+    };
+    expect(switchDraftKind(base, "income")).toEqual({
+      ...base,
+      kind: "income",
+      categoryId: "",
+    });
+    expect(switchDraftKind({ ...base, kind: "income", categoryId: "" }, "expense")).toEqual({
+      ...base,
+      kind: "expense",
+      categoryId: "",
+    });
+  });
 });

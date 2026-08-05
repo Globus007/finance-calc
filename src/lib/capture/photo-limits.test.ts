@@ -4,6 +4,7 @@ import {
   buildPhotoObjectPath,
   checkPhotoFileMeta,
   isUserCapturePath,
+  looksLikeCaptureObjectPath,
 } from "./photo-limits";
 
 describe("checkPhotoFileMeta", () => {
@@ -52,6 +53,30 @@ describe("isUserCapturePath", () => {
     expect(isUserCapturePath(user, `${user}/a/b.jpg`)).toBe(false);
     expect(isUserCapturePath(user, `/${user}/a.jpg`)).toBe(false);
     expect(isUserCapturePath(user, "")).toBe(false);
+  });
+});
+
+describe("looksLikeCaptureObjectPath", () => {
+  it("accepts single-segment owner/name.ext shapes (photo and voice)", () => {
+    expect(
+      looksLikeCaptureObjectPath(
+        "11111111-1111-1111-1111-111111111111/abc.jpg",
+      ),
+    ).toBe(true);
+    expect(
+      looksLikeCaptureObjectPath(
+        "11111111-1111-1111-1111-111111111111/id.webm",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects empty, traversal, nested folders, and extensionless names", () => {
+    expect(looksLikeCaptureObjectPath("")).toBe(false);
+    expect(looksLikeCaptureObjectPath("only-name.jpg")).toBe(false);
+    expect(looksLikeCaptureObjectPath("/user/a.jpg")).toBe(false);
+    expect(looksLikeCaptureObjectPath("user/../x.jpg")).toBe(false);
+    expect(looksLikeCaptureObjectPath("user/a/b.jpg")).toBe(false);
+    expect(looksLikeCaptureObjectPath("user/noext")).toBe(false);
   });
 });
 

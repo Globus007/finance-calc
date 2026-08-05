@@ -5,6 +5,7 @@ import { BottomNav } from "./bottom-nav";
 
 const openManual = vi.fn();
 const openPhoto = vi.fn();
+const openVoice = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -14,6 +15,7 @@ vi.mock("@/components/capture/capture-flow", () => ({
   useCapture: () => ({
     openManual,
     openPhoto,
+    openVoice,
     isCaptureOpen: false,
   }),
 }));
@@ -22,6 +24,7 @@ afterEach(() => {
   cleanup();
   openManual.mockClear();
   openPhoto.mockClear();
+  openVoice.mockClear();
 });
 
 describe("BottomNav chrome", () => {
@@ -54,5 +57,15 @@ describe("BottomNav chrome", () => {
 
     await user.click(screen.getByRole("button", { name: "Фото чека" }));
     expect(openPhoto).toHaveBeenCalledOnce();
+  });
+
+  it("opens voice capture from the mic control", async () => {
+    const user = userEvent.setup();
+    render(<BottomNav />);
+
+    const mic = screen.getByRole("button", { name: "Голосовая запись" });
+    expect(mic).toBeEnabled();
+    await user.click(mic);
+    expect(openVoice).toHaveBeenCalledOnce();
   });
 });

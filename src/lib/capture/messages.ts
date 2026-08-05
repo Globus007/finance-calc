@@ -1,5 +1,5 @@
 /**
- * Russian copy for photo capture shell (ADR-0008).
+ * Russian copy for capture shells (ADR-0008).
  * Pre-capture vs Extraction failure are distinct modes.
  */
 
@@ -51,3 +51,70 @@ export const PHOTO_EXTRACTION_FAILURE = {
 export const PHOTO_PROGRESS_LABEL = "Распознаём чек…";
 
 export const PHOTO_CANCEL_LABEL = "Отмена";
+
+/** Voice pre-capture reasons (ADR-0008). */
+export type VoicePreCaptureReason =
+  | "permission"
+  | "type"
+  | "size"
+  | "offline"
+  | "unavailable"
+  | "insecure";
+
+export const VOICE_PRE_CAPTURE_MESSAGES: Record<
+  VoicePreCaptureReason,
+  { title: string; body: string; primaryCta: string }
+> = {
+  permission: {
+    title: "Нет доступа к микрофону",
+    body: "Разрешите доступ к микрофону в настройках браузера и попробуйте снова.",
+    primaryCta: "Повторить",
+  },
+  type: {
+    title: "Неподдерживаемый формат",
+    body: "Запись в этом формате недоступна. Попробуйте другой браузер.",
+    primaryCta: "Повторить",
+  },
+  size: {
+    title: "Запись слишком длинная",
+    body: "Голосовая запись должна быть не больше 2 МБ (~60 с). Запишите короче.",
+    primaryCta: "Новая запись",
+  },
+  offline: {
+    title: "Нет сети",
+    body: "Для распознавания голоса нужен интернет. Подключитесь и попробуйте снова.",
+    primaryCta: "Повторить",
+  },
+  unavailable: {
+    title: "Микрофон недоступен",
+    body: "Не удалось открыть микрофон на этом устройстве.",
+    primaryCta: "Повторить",
+  },
+  insecure: {
+    title: "Нужен безопасный сайт",
+    body: "Запись голоса работает только по HTTPS (или localhost).",
+    primaryCta: "Понятно",
+  },
+};
+
+/** Generic Extraction failure for voice — recapture without auto-mic (ADR-0008). */
+export const VOICE_EXTRACTION_FAILURE = {
+  title: "Не удалось распознать запись",
+  body: "Сделайте новую запись. Повтор той же записи недоступен.",
+  primaryCta: "Новая запись",
+} as const;
+
+export const VOICE_PROGRESS_LABEL = "Распознаём голос…";
+
+export const VOICE_CANCEL_LABEL = "Отмена";
+
+export const VOICE_READY_TITLE = "Голосовая запись";
+
+export const VOICE_READY_BODY =
+  "Нажмите «Записать» и коротко скажите сумму и контекст (расход или доход). До ~60 секунд.";
+
+export const VOICE_RECORD_CTA = "Записать";
+
+export const VOICE_STOP_CTA = "Стоп";
+
+export const VOICE_RECORDING_LABEL = "Идёт запись…";

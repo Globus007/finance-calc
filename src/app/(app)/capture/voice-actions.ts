@@ -2,14 +2,12 @@
 
 import {
   CAPTURE_TEMP_BUCKET,
-  PHOTO_MAX_BYTES,
-  buildPhotoObjectPath,
-  isAllowedPhotoMime,
+  VOICE_MAX_BYTES,
+  buildVoiceObjectPath,
+  canonicalVoiceMime,
   isUserCapturePath,
-  looksLikeCaptureObjectPath,
-  normalizeMime,
-  type PhotoMime,
-} from "@/lib/capture/photo-limits";
+  type VoiceMime,
+} from "@/lib/capture/voice-limits";
 import {
   CATEGORY_SELECT,
   mapCategoryRow,
@@ -21,15 +19,16 @@ import {
   draftFromNormalized,
   normalizeExtract,
 } from "@/lib/extract/normalize-extract";
-import { extractReceiptFields } from "@/lib/extract/vision-receipt";
+import { isUsableTranscript, transcribeRecording } from "@/lib/extract/stt";
+import { extractFromVoiceTranscript } from "@/lib/extract/voice-transcript";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export type CreatePhotoUploadResult =
+export type CreateVoiceUploadResult =
   | { status: "ok"; path: string; token: string }
   | { status: "error"; reason: "unauthenticated" | "unavailable" | "type" };
 
-export type ExtractPhotoDraftResult =
+export type ExtractVoiceDraftResult =
   | {
       status: "ok";
       draft: Draft;
@@ -56,21 +55,21 @@ async function requireUser() {
 }
 
 /**
- * Short-lived signed upload for a Receipt under `{user_id}/{uuid}.ext`.
- * Client uploads directly to Storage, then calls extractPhotoDraft (ADR-0005).
+ * Short-lived signed upload for a Recording under `{user_id}/{uuid}.ext`.
+ * Client uploads directly to Storage, then calls extractVoiceDraft (ADR-0005).
  */
-export async function createPhotoUpload(input: {
+export async function createVoiceUpload(input: {
   contentType: string;
-}): Promise<CreatePhotoUploadResult> {
-  const mime = normalizeMime(input.contentType);
-  if (!isAllowedPhotoMime(mime)) {
+}): Promise<CreateVoiceUploadResult> {
+  const mime = canonicalVoiceMime(input.contentType);
+  if (!mime) {
     return { status: "error", reason: "type" };
   }
 
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
 
-  const path = buildPhotoObjectPath(user.id, mime as PhotoMime);
+  const path = buildVoiceObjectPath(user.id, mime as VoiceMime);
 
   const { data, error } = await supabase.storage
     .from(CAPTURE_TEMP_BUCKET)
@@ -84,13 +83,14 @@ export async function createPhotoUpload(input: {
 }
 
 /**
- * Server: read temp object → vision extract → normalize → eager delete.
+ * Server: read temp object → STT → text extract → normalize → eager delete.
  * Success with null Amount still returns ok Draft for confirm (ADR-0007).
+ * Empty/unusable transcript → Extraction failure.
  * Deletes object on success and Extraction failure (ADR-0005).
  */
-export async function extractPhotoDraft(input: {
+export async function extractVoiceDraft(input: {
   path: string;
-}): Promise<ExtractPhotoDraftResult> {
+}): Promise<ExtractVoiceDraftResult> {
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
 
@@ -98,7 +98,6 @@ export async function extractPhotoDraft(input: {
     return { status: "error", reason: "invalid_path" };
   }
 
-  // Visible categories + system fallback for normalize (async-parallel).
   const [categoriesResult, fallbackResult] = await Promise.all([
     supabase
       .from("categories")
@@ -112,7 +111,6 @@ export async function extractPhotoDraft(input: {
   ]);
 
   if (categoriesResult.error || fallbackResult.error || !fallbackResult.data) {
-    // Still try to delete the object if present.
     await bestEffortDelete(input.path);
     return { status: "error", reason: "unavailable" };
   }
@@ -138,35 +136,45 @@ export async function extractPhotoDraft(input: {
       return { status: "error", reason: "extraction_failure" };
     }
 
-    if (blob.size > PHOTO_MAX_BYTES) {
+    if (blob.size > VOICE_MAX_BYTES) {
+      await bestEffortDelete(input.path);
+      return { status: "error", reason: "extraction_failure" };
+    }
+
+    const resolvedMime = blob.type || mimeFromPath(input.path);
+    if (!canonicalVoiceMime(resolvedMime)) {
       await bestEffortDelete(input.path);
       return { status: "error", reason: "extraction_failure" };
     }
 
     const buffer = new Uint8Array(await blob.arrayBuffer());
     bytes = buffer;
-    mimeType = blob.type || mimeFromPath(input.path);
+    mimeType = resolvedMime;
   } catch {
     await bestEffortDelete(input.path);
     return { status: "error", reason: "extraction_failure" };
   }
 
   try {
-    const raw = await extractReceiptFields({
-      bytes,
-      mimeType,
+    const { text } = await transcribeRecording({ bytes, mimeType });
+    if (!isUsableTranscript(text)) {
+      return { status: "error", reason: "extraction_failure" };
+    }
+
+    const raw = await extractFromVoiceTranscript({
+      transcript: text,
       visibleCategories,
     });
 
     const normalized = normalizeExtract({
       raw,
-      channel: "photo",
-      forceExpense: true,
+      channel: "voice",
+      forceExpense: false,
       visibleCategories,
       systemFallbackCategoryId,
     });
 
-    const draft = draftFromNormalized(normalized, "photo");
+    const draft = draftFromNormalized(normalized, "voice");
 
     return {
       status: "ok",
@@ -180,31 +188,6 @@ export async function extractPhotoDraft(input: {
   }
 }
 
-/**
- * Best-effort delete of a capture-temp object (cancel after upload, purge
- * after a non-ok extract, etc.). Authenticated callers may only delete within
- * their own prefix; the session user owns the path. When the session has
- * expired mid-pipeline the object is an orphan (ADR-0005) — purge it anyway so
- * sensitive media does not linger until the bucket TTL. The path was
- * server-issued at createUpload time and is `{userUUID}/{objectUUID}.ext`, so
- * a structurally valid path is safe for the service role to delete (Storage
- * `remove` is delete-only and the bucket is private + 1h-TTL ephemeral).
- */
-export async function deleteCaptureTempObject(input: {
-  path: string;
-}): Promise<{ status: "ok" } | { status: "error"; reason: "invalid_path" }> {
-  const { user } = await requireUser();
-  if (user) {
-    if (!isUserCapturePath(user.id, input.path)) {
-      return { status: "error", reason: "invalid_path" };
-    }
-  } else if (!looksLikeCaptureObjectPath(input.path)) {
-    return { status: "error", reason: "invalid_path" };
-  }
-  await bestEffortDelete(input.path);
-  return { status: "ok" };
-}
-
 async function bestEffortDelete(path: string): Promise<void> {
   try {
     const admin = createAdminClient();
@@ -215,7 +198,11 @@ async function bestEffortDelete(path: string): Promise<void> {
 }
 
 function mimeFromPath(path: string): string {
-  if (path.endsWith(".png")) return "image/png";
-  if (path.endsWith(".webp")) return "image/webp";
-  return "image/jpeg";
+  if (path.endsWith(".webm")) return "audio/webm";
+  if (path.endsWith(".m4a") || path.endsWith(".mp4")) return "audio/mp4";
+  if (path.endsWith(".mp3")) return "audio/mpeg";
+  if (path.endsWith(".ogg")) return "audio/ogg";
+  if (path.endsWith(".wav")) return "audio/wav";
+  if (path.endsWith(".aac")) return "audio/aac";
+  return "audio/webm";
 }

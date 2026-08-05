@@ -12,18 +12,24 @@ import {
 import { useRouter } from "next/navigation";
 import { loadPickerCategories } from "@/app/(app)/capture/actions";
 import type { CategoryPickerItem } from "@/lib/categories/types";
-import type { PhotoPreCaptureReason } from "@/lib/capture/messages";
+import type {
+  PhotoPreCaptureReason,
+  VoicePreCaptureReason,
+} from "@/lib/capture/messages";
 import { runPhotoPipeline } from "@/lib/capture/run-photo-pipeline";
+import { runVoicePipeline } from "@/lib/capture/run-voice-pipeline";
 import { createManualDraft } from "@/lib/draft/create-manual-draft";
 import type { Draft, RecordKind } from "@/lib/draft/types";
 import { ConfirmDraft } from "./confirm-draft";
 import { ManualTypePicker } from "./manual-type-picker";
 import { PhotoShell, type PhotoShellMode } from "./photo-shell";
+import { VoiceShell, type VoiceShellMode } from "./voice-shell";
 
 type CapturePhase =
   | { name: "idle" }
   | { name: "manual-type" }
   | { name: "photo"; shell: PhotoShellMode; autoOpen: boolean }
+  | { name: "voice"; shell: VoiceShellMode }
   | {
       name: "confirm";
       draft: Draft;
@@ -33,6 +39,7 @@ type CapturePhase =
 type CaptureContextValue = {
   openManual: () => void;
   openPhoto: () => void;
+  openVoice: () => void;
   isCaptureOpen: boolean;
   phase: CapturePhase;
   loadError: string | null;
@@ -44,6 +51,11 @@ type CaptureContextValue = {
   cancelPhotoProgress: () => void;
   recapturePhoto: () => void;
   setPhotoPreError: (reason: PhotoPreCaptureReason) => void;
+  requestVoiceRecord: () => void;
+  onVoiceRecording: (blob: Blob, mimeType: string) => void;
+  cancelVoiceProgress: () => void;
+  recaptureVoice: () => void;
+  setVoicePreError: (reason: VoicePreCaptureReason) => void;
 };
 
 const CaptureContext = createContext<CaptureContextValue | null>(null);
@@ -57,8 +69,7 @@ export function useCapture(): CaptureContextValue {
 }
 
 /**
- * Shell-level capture: photo pipeline + manual type pick → confirm.
- * Voice arrives later on the same host.
+ * Shell-level capture: photo / voice pipelines + manual type pick → confirm.
  */
 export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -90,6 +101,14 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       shell: { name: "pick" },
       autoOpen: true,
     });
+  }, []);
+
+  const openVoice = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoadError(null);
+    // Ready UI only — never auto-start mic (ADR-0008).
+    setPhase({ name: "voice", shell: { name: "ready" } });
   }, []);
 
   const pickManualKind = useCallback((kind: RecordKind) => {
@@ -212,10 +231,79 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const requestVoiceRecord = useCallback(() => {
+    setPhase({ name: "voice", shell: { name: "recording" } });
+  }, []);
+
+  const recaptureVoice = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    // Ready only — no auto-mic (ADR-0008).
+    setPhase({ name: "voice", shell: { name: "ready" } });
+  }, []);
+
+  const setVoicePreError = useCallback((reason: VoicePreCaptureReason) => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPhase({ name: "voice", shell: { name: "pre-error", reason } });
+  }, []);
+
+  const cancelVoiceProgress = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPhase({ name: "idle" });
+  }, []);
+
+  const onVoiceRecording = useCallback(async (blob: Blob, mimeType: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setPhase({ name: "voice", shell: { name: "progress" } });
+
+    const result = await runVoicePipeline(blob, {
+      signal: controller.signal,
+      mimeType,
+    });
+
+    if (controller.signal.aborted || result.status === "cancelled") {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setPhase({ name: "idle" });
+      }
+      return;
+    }
+
+    abortRef.current = null;
+
+    if (result.status === "ok") {
+      setPhase({
+        name: "confirm",
+        draft: result.draft,
+        categories: result.categories,
+      });
+      return;
+    }
+
+    if (result.status === "pre-capture") {
+      setPhase({
+        name: "voice",
+        shell: {
+          name: "pre-error",
+          reason: result.reason as VoicePreCaptureReason,
+        },
+      });
+      return;
+    }
+
+    setPhase({ name: "voice", shell: { name: "extract-fail" } });
+  }, []);
+
   const value = useMemo(
     () => ({
       openManual,
       openPhoto,
+      openVoice,
       isCaptureOpen: phase.name !== "idle",
       phase,
       loadError,
@@ -227,10 +315,16 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       cancelPhotoProgress,
       recapturePhoto,
       setPhotoPreError,
+      requestVoiceRecord,
+      onVoiceRecording,
+      cancelVoiceProgress,
+      recaptureVoice,
+      setVoicePreError,
     }),
     [
       openManual,
       openPhoto,
+      openVoice,
       phase,
       loadError,
       isOpeningConfirm,
@@ -241,6 +335,11 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       cancelPhotoProgress,
       recapturePhoto,
       setPhotoPreError,
+      requestVoiceRecord,
+      onVoiceRecording,
+      cancelVoiceProgress,
+      recaptureVoice,
+      setVoicePreError,
     ],
   );
 
@@ -262,6 +361,11 @@ export function CaptureLayer() {
     cancelPhotoProgress,
     recapturePhoto,
     setPhotoPreError,
+    requestVoiceRecord,
+    onVoiceRecording,
+    cancelVoiceProgress,
+    recaptureVoice,
+    setVoicePreError,
   } = useCapture();
 
   if (phase.name === "idle") return null;
@@ -297,6 +401,26 @@ export function CaptureLayer() {
           }}
           onCaptureUnavailable={() => {
             setPhotoPreError("unavailable");
+          }}
+        />
+      ) : null}
+
+      {phase.name === "voice" ? (
+        <VoiceShell
+          mode={phase.shell}
+          onRequestRecord={requestVoiceRecord}
+          onRecording={onVoiceRecording}
+          onCancelProgress={cancelVoiceProgress}
+          onRecapture={recaptureVoice}
+          onDismiss={discard}
+          onPermissionDenied={() => {
+            setVoicePreError("permission");
+          }}
+          onCaptureUnavailable={() => {
+            setVoicePreError("unavailable");
+          }}
+          onInsecureContext={() => {
+            setVoicePreError("insecure");
           }}
         />
       ) : null}
