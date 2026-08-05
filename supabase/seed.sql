@@ -1,0 +1,2 @@
+-- No global seed data. Categories are copied per user on auth.users insert
+-- (see seed_categories_for_user / handle_new_user_seed_categories).
