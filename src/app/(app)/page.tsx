@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { IconTags } from "@/components/icons";
 
 /**
@@ -19,15 +20,13 @@ export default function HomePage() {
             <p className="text-base font-semibold tracking-tight">Финансы</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5B6CFF] shadow-sm shadow-black/5"
+        <Link
+          href="/categories"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#5B6CFF] shadow-sm shadow-black/5 transition active:scale-95"
           aria-label="Категории"
-          disabled
-          title="Скоро"
         >
           <IconTags size={18} />
-        </button>
+        </Link>
       </header>
 
       <section
