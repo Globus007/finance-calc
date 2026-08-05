@@ -97,6 +97,16 @@ export async function commitPhotoDraft(
   return commitWithChannel({ ...input, kind: "expense" }, "photo");
 }
 
+/**
+ * Commit a voice Draft: channel forced to `voice`.
+ * Kind may be expense or income (confirm-time switch, ADR-0002).
+ */
+export async function commitVoiceDraft(
+  input: CommitDraftInput,
+): Promise<CommitDraftResult> {
+  return commitWithChannel(input, "voice");
+}
+
 async function commitWithChannel(
   input: CommitDraftInput,
   channel: CaptureChannel,

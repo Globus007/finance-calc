@@ -187,4 +187,66 @@ describe("draftFromNormalized", () => {
       note: "Cafe",
     });
   });
+
+  it("sets channel voice for income without category", () => {
+    const draft = draftFromNormalized(
+      {
+        kind: "income",
+        amount: "100.00",
+        occurredOn: "2026-08-05",
+        categoryId: "",
+        note: "зарплата",
+      },
+      "voice",
+    );
+    expect(draft).toEqual({
+      kind: "income",
+      channel: "voice",
+      amount: "100.00",
+      occurredOn: "2026-08-05",
+      categoryId: "",
+      note: "зарплата",
+    });
+  });
+});
+
+describe("normalizeExtract voice", () => {
+  it("keeps model income kind when forceExpense is false", () => {
+    const n = normalizeExtract({
+      raw: {
+        record_kind: "income",
+        amount: 200,
+        occurred_on: "2026-08-03",
+        category_id: PRODUCTS,
+        note: "фриланс",
+      },
+      channel: "voice",
+      forceExpense: false,
+      visibleCategories: visible,
+      systemFallbackCategoryId: FALLBACK,
+      at: fixedAt,
+    });
+    expect(n.kind).toBe("income");
+    expect(n.categoryId).toBe("");
+    expect(n.amount).toBe("200.00");
+  });
+
+  it("defaults ambiguous kind to expense with system fallback category", () => {
+    const n = normalizeExtract({
+      raw: {
+        record_kind: null,
+        amount: 15,
+        occurred_on: null,
+        category_id: null,
+        note: "кофе",
+      },
+      channel: "voice",
+      forceExpense: false,
+      visibleCategories: visible,
+      systemFallbackCategoryId: FALLBACK,
+      at: fixedAt,
+    });
+    expect(n.kind).toBe("expense");
+    expect(n.categoryId).toBe(FALLBACK);
+  });
 });

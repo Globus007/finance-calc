@@ -4,11 +4,12 @@ import { useState, useTransition } from "react";
 import {
   commitDraft,
   commitPhotoDraft,
+  commitVoiceDraft,
   type CommitDraftResult,
 } from "@/app/(app)/capture/actions";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import { commitErrorMessage } from "@/lib/draft/error-messages";
-import type { Draft } from "@/lib/draft/types";
+import type { Draft, RecordKind } from "@/lib/draft/types";
 import { canCommit } from "@/lib/draft/validate-commit";
 import { MAX_NOTE_LENGTH } from "@/lib/draft/normalize-note";
 
@@ -25,17 +26,33 @@ type Props = {
   categories: CategoryPickerItem[];
   onDiscard: () => void;
   onCommitted: () => void;
-  /** Injectable for tests; defaults by channel (manual vs photo). */
+  /** Injectable for tests; defaults by channel (manual / photo / voice). */
   commitFn?: (input: CommitInput) => Promise<CommitDraftResult>;
 };
 
 function defaultCommitFor(draft: Draft) {
-  return draft.channel === "photo" ? commitPhotoDraft : commitDraft;
+  if (draft.channel === "photo") return commitPhotoDraft;
+  if (draft.channel === "voice") return commitVoiceDraft;
+  return commitDraft;
+}
+
+/**
+ * Expense↔Income switch rules for voice (ADR-0002):
+ * Expense→Income drops Category; Income→Expense clears Category until user picks.
+ * Amount / Occurred on / Note are kept.
+ */
+export function switchDraftKind(draft: Draft, kind: RecordKind): Draft {
+  if (draft.kind === kind) return draft;
+  if (kind === "income") {
+    return { ...draft, kind: "income", categoryId: "" };
+  }
+  return { ...draft, kind: "expense", categoryId: "" };
 }
 
 /**
  * Confirm form for one in-flight Draft (ADR-0003).
  * Channel is not shown or edited. Commit failure keeps Draft for retry.
+ * Voice allows Expense↔Income switch on confirm (ADR-0002).
  */
 export function ConfirmDraft({
   initialDraft,
@@ -50,10 +67,16 @@ export function ConfirmDraft({
   const [isPending, startTransition] = useTransition();
 
   const ready = canCommit(draft);
+  const allowKindSwitch = draft.channel === "voice";
 
   function patch(partial: Partial<Draft>) {
     setError(null);
     setDraft((d) => ({ ...d, ...partial }));
+  }
+
+  function onKindSwitch(kind: RecordKind) {
+    setError(null);
+    setDraft((d) => switchDraftKind(d, kind));
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -111,6 +134,35 @@ export function ConfirmDraft({
           >
             {title}
           </h1>
+
+          {allowKindSwitch ? (
+            <div
+              className="mt-3 flex gap-2"
+              role="group"
+              aria-label="Тип записи"
+            >
+              {(
+                [
+                  { kind: "expense" as const, label: "Расход" },
+                  { kind: "income" as const, label: "Доход" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.kind}
+                  type="button"
+                  onClick={() => onKindSwitch(opt.kind)}
+                  aria-pressed={draft.kind === opt.kind}
+                  className={`flex-1 cursor-pointer rounded-xl py-2.5 text-xs font-bold transition ${
+                    draft.kind === opt.kind
+                      ? "bg-[#5B6CFF] text-white shadow-md shadow-[#5B6CFF]/30"
+                      : "bg-white text-[#1A1B2E]/45 ring-1 ring-[#1A1B2E]/8"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           {error !== null ? (
             <p
