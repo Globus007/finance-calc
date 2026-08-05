@@ -25,7 +25,7 @@ The user action that abandons a whole Draft without creating an Expense or Incom
 _Avoid_: Cancel (for this action), abort, reject
 
 **Category**:
-A user-facing label for classifying an Expense. One concept for seed and user-defined (origin is a property, not two types); applies only to Expenses and is required on every committed Expense. Stable identity is separate from display name; display names are unique per user across visible and hidden Categories (case-insensitive). Seed Categories cannot be renamed or hard-deleted; user-defined may be renamed and may be hard-deleted only when no committed Expense uses them. Automatic classification maps only to the user's visible Categories and never creates Categories; a new manual Expense Draft starts with no Category until the user chooses one.
+A user-facing label for classifying an Expense. One concept for seed and user-defined (origin is a property, not two types); applies only to Expenses and is required on every committed Expense. Stable identity is separate from display name; display names are unique per user across visible and hidden Categories (case-insensitive). Seed Categories cannot be renamed or hard-deleted; user-defined may be renamed and may be hard-deleted only when no committed Expense uses them. Automatic classification chooses among the user's visible Categories by **stable identity** and never creates Categories; if it cannot choose a better match it uses the System fallback Category. A new manual Expense Draft starts with no Category until the user chooses one. Income has no Category.
 _Avoid_: Tag, folder, budget line, expense type, Income category, Seed Category / Custom Category (as separate types)
 
 **System fallback Category**:
@@ -65,7 +65,7 @@ The voice audio input used to extract a Draft (speech-to-text then language extr
 _Avoid_: Audio clip, voice note, utterance (as the domain name), retained playback on confirm
 
 **Extraction failure**:
-When the capture pipeline cannot open a usable Draft (e.g. STT/vision/transport failure or unusable input). Distinct from an incomplete Draft (e.g. missing Amount after a successful pipeline run—confirm still opens so the user can fill fields), from Discard, and from Delete. Not a per-field confidence concept: MVP has no confidence flags on Draft fields. Recovery is a new capture cycle, not reprocessing retained media.
+When the capture pipeline cannot open a usable Draft (e.g. STT/vision/transport failure, unusable input, or unparseable extract). Distinct from an incomplete Draft (e.g. missing Amount after a successful pipeline run—confirm still opens so the user can fill fields), from Discard, and from Delete. Not a per-field confidence concept: MVP has no confidence flags on Draft fields. Recovery is a new capture cycle, not reprocessing retained media.
 _Avoid_: Error (as the domain name), cancel, failed save, confidence flag (as a domain field)
 
 
