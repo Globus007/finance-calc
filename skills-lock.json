@@ -121,6 +121,12 @@
       "skillPath": "skills/engineering/triage/SKILL.md",
       "computedHash": "7c923b6a677cfe689500721f08307e2a4c46797ff169dc55ef6c34a431a0d533"
     },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "ae6989c5c68a8a0cebbc2504e44f933dddd50d17974f295dc2fa5a80cb3d63ed"
+    },
     "wayfinder": {
       "source": "mattpocock/skills",
       "sourceType": "github",
