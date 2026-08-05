@@ -148,6 +148,10 @@ async function commitWithChannel(
       .single();
 
     if (error || !data) {
+      // DB trigger rejects hidden Category (P0002) even if Hide raced past the pre-check.
+      if (error && (error.code === "P0002" || error.message === "category_hidden")) {
+        return { status: "error", reason: "category_hidden" };
+      }
       // FK / check failures surface as unavailable for retry
       return { status: "error", reason: "unavailable" };
     }
