@@ -17,11 +17,11 @@ A not-yet-committed capture result held for in-flight user confirmation only (Co
 _Avoid_: Pending expense, unsaved transaction, form state (as the domain name), temporary expense, Line, multi-item draft
 
 **Commit**:
-The user action that creates exactly one Expense or exactly one Income from a confirmed Draft and ends that Draft. There is no partial Commit and no residual Draft. Only committed Expenses and Incomes appear in History and Monthly totals. Expense Commit requires Amount, Occurred on, and Category. Income Commit requires Amount and Occurred on. Closing confirm without Commit is Discard (explicit or equivalent).
+The user action that creates exactly one Expense or exactly one Income from a confirmed Draft and ends that Draft. There is no partial Commit and no residual Draft. Only committed Expenses and Incomes appear in History and Monthly totals. Expense Commit requires Amount, Occurred on, and Category. Income Commit requires Amount and Occurred on. Closing confirm without Commit is Discard (explicit or equivalent). If the Commit attempt fails to persist, the Draft stays in-flight on confirm so the user may try Commit again or Discard—this is not Extraction failure and not a return to capture media.
 _Avoid_: Save (as the domain verb for this step), publish, finalize, post, sync
 
 **Discard**:
-The user action that abandons a whole Draft without creating an Expense or Income. Distinct from Delete of a committed record.
+The user action that abandons a whole Draft without creating an Expense or Income. Distinct from Delete of a committed record. Distinct from cancelling an in-flight extract before any Draft exists.
 _Avoid_: Cancel (for this action), abort, reject
 
 **Category**:
@@ -65,8 +65,8 @@ The voice audio input used to extract a Draft (speech-to-text then language extr
 _Avoid_: Audio clip, voice note, utterance (as the domain name), retained playback on confirm
 
 **Extraction failure**:
-When the capture pipeline cannot open a usable Draft (e.g. STT/vision/transport failure, unusable input, or unparseable extract). Distinct from an incomplete Draft (e.g. missing Amount after a successful pipeline run—confirm still opens so the user can fill fields), from Discard, and from Delete. Not a per-field confidence concept: MVP has no confidence flags on Draft fields. Recovery is a new capture cycle, not reprocessing retained media.
-_Avoid_: Error (as the domain name), cancel, failed save, confidence flag (as a domain field)
+When the capture pipeline cannot open a usable Draft after an extract attempt (e.g. STT/vision/transport failure mid-flight, unusable input, or unparseable extract). Distinct from problems that block capture before upload (permission, size limits, offline before send)—those never start the pipeline and are not Extraction failure. Distinct from an incomplete Draft (e.g. missing Amount after a successful pipeline run—confirm still opens so the user can fill fields), from cancelling extract before a Draft exists, from a failed Commit of an already opened Draft, from Discard, and from Delete. Not a per-field confidence concept: MVP has no confidence flags on Draft fields. Recovery is a new capture cycle on the same Channel (recapture), not reprocessing retained media and not opening confirm.
+_Avoid_: Error (as the domain name), cancel, failed save, confidence flag (as a domain field), retry same file
 
 
 **Edit**:
