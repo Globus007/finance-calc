@@ -21,7 +21,7 @@ const instrument = Instrument_Serif({
 export const metadata: Metadata = {
   title: "PROTOTYPE · MVP screen map (#8)",
   description:
-    "Throwaway UI prototype: three mobile IA variants for finance-calc MVP",
+    "Throwaway UI prototype: voice-first soft-fintech screen map (A / C) for finance-calc MVP",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
