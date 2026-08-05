@@ -17,3 +17,12 @@ next-env.d.ts
 *.swp
 .idea/
 .vscode/
+
+# Vercel CLI link metadata
+.vercel
+
+# Local env (keep .env.example tracked)
+.env
+.env.local
+.env.*.local
+!.env.example

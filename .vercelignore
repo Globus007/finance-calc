@@ -1,0 +1,13 @@
+# Never upload local secrets to Vercel builds (CLI deploy ignores .gitignore
+# inconsistently for some env files; keep an explicit blocklist).
+.env
+.env.*
+!.env.example
+
+# Local / tooling noise
+.vercel
+coverage
+*.tsbuildinfo
+
+# Nested throwaway prototype (not part of production app)
+prototype-screen-map
