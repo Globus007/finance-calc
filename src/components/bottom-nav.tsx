@@ -4,6 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconCamera, IconChart, IconHome, IconMic, IconPen } from "./icons";
 
+/** Hoisted static icons — avoid re-creating element trees each render. */
+const HOME_ICON = <IconHome size={20} />;
+const CHART_ICON = <IconChart size={20} />;
+const CAMERA_ICON = <IconCamera size={20} />;
+const MIC_ICON = <IconMic size={26} />;
+const PEN_ICON = <IconPen size={20} />;
+
 /**
  * Home chrome bottom bar: Домой | photo · big mic · manual | Месяц.
  * Capture actions are stubs until later tickets wire pipelines.
@@ -19,12 +26,7 @@ export function BottomNav() {
       aria-label="Основная навигация"
     >
       <div className="mx-auto grid max-w-lg grid-cols-[1fr_auto_1fr] items-end gap-1">
-        <NavTab
-          href="/"
-          active={onHome}
-          label="Домой"
-          icon={<IconHome size={20} />}
-        />
+        <NavTab href="/" active={onHome} label="Домой" icon={HOME_ICON} />
 
         <div
           className="-mt-8 flex items-center gap-1.5 rounded-full border border-white/80 bg-white p-1.5 shadow-[0_12px_40px_-8px_rgba(26,27,46,0.25)]"
@@ -38,7 +40,7 @@ export function BottomNav() {
             disabled
             title="Скоро"
           >
-            <IconCamera size={20} />
+            {CAMERA_ICON}
           </button>
           <button
             type="button"
@@ -47,7 +49,7 @@ export function BottomNav() {
             disabled
             title="Скоро"
           >
-            <IconMic size={26} />
+            {MIC_ICON}
           </button>
           <button
             type="button"
@@ -56,16 +58,11 @@ export function BottomNav() {
             disabled
             title="Скоро"
           >
-            <IconPen size={20} />
+            {PEN_ICON}
           </button>
         </div>
 
-        <NavTab
-          href="/month"
-          active={onMonth}
-          label="Месяц"
-          icon={<IconChart size={20} />}
-        />
+        <NavTab href="/month" active={onMonth} label="Месяц" icon={CHART_ICON} />
       </div>
     </nav>
   );
