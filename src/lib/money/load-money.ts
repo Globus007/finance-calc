@@ -137,7 +137,13 @@ async function fetchExpenses(
   if (range.limit != null) q = q.limit(range.limit);
 
   const { data, error } = await q;
-  if (error || !data) return [];
+  // Fail closed: never treat query errors as an empty month/history.
+  // Partial silence would zero Monthly totals and hide History without notice.
+  if (error || !data) {
+    throw new Error(
+      `Failed to load expenses: ${error?.message ?? "no data"}`,
+    );
+  }
   return (data as ExpenseDbRow[]).map(mapExpenseRow);
 }
 
@@ -156,7 +162,11 @@ async function fetchIncomes(
   if (range.limit != null) q = q.limit(range.limit);
 
   const { data, error } = await q;
-  if (error || !data) return [];
+  if (error || !data) {
+    throw new Error(
+      `Failed to load incomes: ${error?.message ?? "no data"}`,
+    );
+  }
   return (data as IncomeDbRow[]).map(mapIncomeRow);
 }
 
