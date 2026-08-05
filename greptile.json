@@ -1,0 +1,23 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "instructions": "Always respond in Russian. Все комментарии, summary, объяснения и предложения пиши только на русском языке.\n\nФокус ревью:\n- Безопасность в первую очередь: SQL/NoSQL injection, XSS, CSRF, path traversal, insecure deserialization, SSRF, command injection, небезопасная работа с файлами, hard-coded secrets, слабая криптография, неправильная проверка прав доступа (IDOR, broken authz), утечки чувствительных данных.\n- Проверяй, что входные данные валидируются и санитизируются.\n- Обращай внимание на опасные функции и паттерны (eval, exec, raw SQL, небезопасные десериализаторы, небезопасные redirect и т.п.).\n- Если видишь потенциальную уязвимость — объясняй риск и предлагай безопасный вариант.\n- Не трать комментарии на чистый стиль и форматирование, если это не влияет на читаемость критичных мест или безопасность.\n- Будь конкретным: указывай файл, примерный участок кода и почему это проблема.",
+  "ignorePatterns": [
+    "**/*.md",
+    "**/*.txt",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.git/**",
+    "**/vendor/**",
+    "**/*.min.js",
+    "**/*.generated.*"
+  ],
+  "excludeAuthors": [
+    "dependabot[bot]",
+    "renovate[bot]",
+    "github-actions[bot]"
+  ],
+  "triggerOnUpdates": true,
+  "shouldUpdateDescription": false
+}
