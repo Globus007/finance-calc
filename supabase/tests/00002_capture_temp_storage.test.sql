@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(10);
+select plan(13);
 
 -- ---------------------------------------------------------------------------
 -- Bucket configuration
@@ -97,6 +97,39 @@ select ok(
     limit 1
   ),
   'cleanup function documents TTL max-age parameter'
+);
+
+-- Must delete via Storage HTTP API (backend bytes), not SQL-only metadata rows.
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ilike '%http_delete%'
+      and pg_get_functiondef(p.oid) ilike '%prefixes%'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'cleanup_capture_temp_orphans'
+    limit 1
+  ),
+  'cleanup uses Storage API http_delete with prefixes body'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) not ilike '%delete from storage.objects%'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'cleanup_capture_temp_orphans'
+    limit 1
+  ),
+  'cleanup does not SQL-delete storage.objects rows directly'
+);
+
+select has_function(
+  'public',
+  'configure_capture_temp_cleanup',
+  array['text', 'text'],
+  'configure_capture_temp_cleanup(url, service_role_key) exists'
 );
 
 -- ---------------------------------------------------------------------------

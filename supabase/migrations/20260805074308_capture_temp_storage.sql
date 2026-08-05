@@ -59,10 +59,10 @@ create policy capture_temp_insert_own_prefix
 -- ---------------------------------------------------------------------------
 -- Orphan TTL cleanup (1 hour) — safety net after eager extract delete
 -- ---------------------------------------------------------------------------
--- Prefer Storage API from the app server when possible. This function is the
--- DB-side net for orphans (upload without extract / crash before delete).
--- Uses storage.allow_delete_query so the Storage SQL guard allows the delete;
--- Storage API paths remain the primary delete mechanism for the extract hop.
+-- Placeholder: body is replaced by later migration
+-- 20260805082737_cleanup_capture_temp_via_storage_api.sql to call the Storage
+-- HTTP API (pg_net). Direct SQL DELETE on storage.objects removes metadata only
+-- and leaves backend bytes behind — do not reintroduce it.
 
 create or replace function public.cleanup_capture_temp_orphans(
   p_max_age interval default interval '1 hour',
@@ -71,37 +71,16 @@ create or replace function public.cleanup_capture_temp_orphans(
 returns integer
 language plpgsql
 security definer
-set search_path = public, storage
+set search_path = public
 as $$
-declare
-  deleted_count integer := 0;
 begin
-  -- Allow direct SQL delete on storage.objects for this session (Storage guard).
-  perform set_config('storage.allow_delete_query', 'true', true);
-
-  with doomed as (
-    select id
-    from storage.objects
-    where bucket_id = 'capture-temp'
-      and created_at < now() - p_max_age
-    order by created_at asc
-    limit greatest(p_limit, 1)
-    for update skip locked
-  ),
-  removed as (
-    delete from storage.objects o
-    using doomed d
-    where o.id = d.id
-    returning o.id
-  )
-  select count(*)::integer into deleted_count from removed;
-
-  return deleted_count;
+  raise exception
+    'cleanup_capture_temp_orphans requires migration 20260805082737 (Storage API cleanup)';
 end;
 $$;
 
 comment on function public.cleanup_capture_temp_orphans(interval, integer) is
-  'Deletes capture-temp Storage objects older than p_max_age (default 1h). Orphan safety net for ADR-0005.';
+  'Stub until Storage API cleanup migration; do not SQL-delete storage.objects.';
 
 revoke all on function public.cleanup_capture_temp_orphans(interval, integer) from public;
 grant execute on function public.cleanup_capture_temp_orphans(interval, integer) to service_role;
