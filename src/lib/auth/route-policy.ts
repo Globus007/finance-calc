@@ -1,6 +1,6 @@
 /**
  * Auth routing policy for the MVP shell.
- * Public: OTP login + optional magic-link confirm.
+ * Public: login + magic-link confirm (PKCE / token_hash).
  * Everything else requires a cookie session (enforced in proxy).
  */
 
@@ -8,7 +8,7 @@ export function isAuthPublicPath(pathname: string): boolean {
   if (pathname === "/login" || pathname.startsWith("/login/")) {
     return true;
   }
-  // Secondary magic-link confirm only (research #11); keep surface narrow.
+  // Magic-link landing — must stay public before session cookies exist.
   if (pathname === "/auth/confirm") {
     return true;
   }

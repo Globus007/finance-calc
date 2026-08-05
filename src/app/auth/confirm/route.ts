@@ -1,33 +1,40 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
+import { resolvePostAuthPath } from "@/lib/auth/site-url";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Secondary magic-link path (token_hash → verifyOtp).
- * Primary auth for installed PWA is in-app email OTP (see /login).
- * Do not rely on PKCE ?code= cross-context exchange on mobile.
+ * Magic-link landing (primary auth for default Supabase email templates).
+ *
+ * Handles both:
+ * - PKCE: ?code=… (default ConfirmationURL → redirect_to)
+ * - token_hash: ?token_hash=…&type=… (custom template / secondary)
+ *
+ * Session cookies are set via @supabase/ssr createServerClient.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  // Allowlist post-auth destinations only (no open redirects).
-  const nextRaw = searchParams.get("next") ?? "/";
-  const next = nextRaw === "/month" ? "/month" : "/";
+  const next = resolvePostAuthPath(searchParams.get("next"));
 
-  const redirectTo = request.nextUrl.clone();
-  redirectTo.search = "";
+  const supabase = await createClient();
+  let signedIn = false;
 
-  if (token_hash && type) {
-    const supabase = await createClient();
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    signedIn = !error;
+  } else if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
-    if (!error) {
-      redirectTo.pathname = next;
-      return NextResponse.redirect(redirectTo);
-    }
+    signedIn = !error;
   }
 
-  redirectTo.pathname = "/login";
-  redirectTo.searchParams.set("error", "auth");
-  return NextResponse.redirect(redirectTo);
+  if (signedIn) {
+    return NextResponse.redirect(new URL(next, origin));
+  }
+
+  const login = new URL("/login", origin);
+  login.searchParams.set("error", "auth");
+  return NextResponse.redirect(login);
 }

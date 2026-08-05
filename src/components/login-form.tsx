@@ -1,39 +1,29 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import {
-  requestLoginOtp,
-  verifyLoginOtp,
-} from "@/app/login/actions";
-import { isValidEmail, isValidOtpCode, normalizeOtpCode } from "@/lib/auth/otp";
-
-type Step = "email" | "otp";
+import { requestLoginOtp } from "@/app/login/actions";
+import { isValidEmail } from "@/lib/auth/otp";
 
 const AUTH_LINK_ERROR =
-  "Не удалось войти по ссылке. Введите код из письма.";
+  "Не удалось войти по ссылке. Запросите новое письмо и откройте ссылку в том же браузере, где нажимали «Получить ссылку».";
 
 const SENT_INFO =
-  "Если этот email зарегистрирован, мы отправили код. Введите 6 цифр.";
+  "Если этот email зарегистрирован, мы отправили ссылку. Откройте письмо и нажмите Sign in — вы попадёте в приложение уже авторизованным.";
 
 /**
- * Primary auth: email OTP entered in-app (PWA-safe).
- * Magic-link ?code= is not the primary flow.
- * OTP request goes through a server action so clients never see
- * account-absence errors (anti-enumeration).
+ * Primary auth: email magic link (default Supabase template).
+ * Session is established on /auth/confirm after the user opens the email link.
  */
 export function LoginForm({ initialError }: { initialError?: string | null }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [step, setStep] = useState<Step>("email");
+  const [step, setStep] = useState<"email" | "sent">("email");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(
     initialError === "auth" ? AUTH_LINK_ERROR : null,
   );
   const [info, setInfo] = useState<string | null>(null);
 
-  function sendOtp(e: React.FormEvent) {
+  function sendLink(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setInfo(null);
@@ -52,7 +42,9 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         return;
       }
       if (result.status === "rate_limited") {
-        setError("Слишком много попыток. Подождите минуту и попробуйте снова.");
+        setError(
+          "Supabase временно блокирует отправку (cooldown ~60 с или лимит бесплатной почты ~2 письма/час). Подождите до часа, проверьте «Спам», не жмите кнопку повторно. Для снятия лимита — Custom SMTP в Dashboard.",
+        );
         return;
       }
       if (result.status === "unavailable") {
@@ -62,39 +54,8 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
 
       // status === "sent" — same for existing and missing accounts
       setEmail(trimmed);
-      setStep("otp");
+      setStep("sent");
       setInfo(SENT_INFO);
-    });
-  }
-
-  function verifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setInfo(null);
-
-    const code = normalizeOtpCode(otp);
-    if (!isValidOtpCode(code)) {
-      setError("Код должен содержать 6 цифр.");
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await verifyLoginOtp(email, code);
-
-      if (result.status === "ok") {
-        router.replace("/");
-        router.refresh();
-        return;
-      }
-      if (result.status === "rate_limited") {
-        setError("Слишком много попыток. Подождите минуту и попробуйте снова.");
-        return;
-      }
-      if (result.status === "invalid_code") {
-        setError("Код неверный или истёк. Запросите новый.");
-        return;
-      }
-      setError("Не удалось выполнить вход. Попробуйте ещё раз.");
     });
   }
 
@@ -104,7 +65,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         <LoginHeader />
 
         {step === "email" ? (
-          <form onSubmit={sendOtp} className="mt-6 space-y-4">
+          <form onSubmit={sendLink} className="mt-6 space-y-4">
             <label className="block">
               <span className="text-xs font-semibold text-[#1A1B2E]/55">
                 Email
@@ -127,55 +88,30 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
               disabled={isPending}
               className="w-full rounded-2xl bg-gradient-to-br from-[#5B6CFF] to-[#4338CA] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#5B6CFF]/30 transition active:scale-[0.99] disabled:opacity-60"
             >
-              {isPending ? "Отправляем…" : "Получить код"}
+              {isPending ? "Отправляем…" : "Получить ссылку"}
             </button>
           </form>
         ) : (
-          <form onSubmit={verifyOtp} className="mt-6 space-y-4">
-            <p className="text-sm text-[#1A1B2E]/55">
-              Код для{" "}
-              <span className="font-semibold text-[#1A1B2E]">{email}</span>
+          <div className="mt-6 space-y-4">
+            <p className="text-sm leading-relaxed text-[#1A1B2E]/70">
+              Письмо отправлено на{" "}
+              <span className="font-semibold text-[#1A1B2E]">{email}</span>.
+              Откройте ссылку <strong>в этом же браузере</strong> (не в другом
+              приложении / инкогнито), иначе сессия не установится.
             </p>
-            <label className="block">
-              <span className="text-xs font-semibold text-[#1A1B2E]/55">
-                Код из письма
-              </span>
-              <input
-                type="text"
-                name="otp"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9 ]*"
-                maxLength={8}
-                required
-                value={otp}
-                onChange={(ev) => setOtp(ev.target.value)}
-                className="mt-1.5 w-full rounded-2xl border border-[#1A1B2E]/10 bg-[#F8F7FC] px-4 py-3 text-center text-2xl font-semibold tracking-[0.35em] outline-none ring-[#5B6CFF]/40 focus:ring-2"
-                placeholder="••••••"
-                disabled={isPending}
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="w-full rounded-2xl bg-gradient-to-br from-[#5B6CFF] to-[#4338CA] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#5B6CFF]/30 transition active:scale-[0.99] disabled:opacity-60"
-            >
-              {isPending ? "Проверяем…" : "Войти"}
-            </button>
             <button
               type="button"
               disabled={isPending}
               onClick={() => {
                 setStep("email");
-                setOtp("");
                 setError(null);
                 setInfo(null);
               }}
               className="w-full text-sm font-semibold text-[#5B6CFF]"
             >
-              Изменить email
+              Изменить email / отправить снова
             </button>
-          </form>
+          </div>
         )}
 
         {info ? (
@@ -202,8 +138,7 @@ function LoginHeader() {
       </p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight">Вход</h1>
       <p className="mt-2 text-sm leading-relaxed text-[#1A1B2E]/55">
-        Вход по коду из письма. Так сессия остаётся в установленном PWA, без
-        перехода по magic-link.
+        Вход по ссылке из письма. После перехода вы сразу попадёте в приложение.
       </p>
     </>
   );

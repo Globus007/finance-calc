@@ -2,6 +2,10 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+# eslint-config-next still pulls plugins that have not declared ESLint 10 peers yet.
+peerDependencyRules:
+  allowedVersions:
+    eslint: ">=9"
 minimumReleaseAgeExclude:
   - '@next/env@16.3.0'
   - '@next/eslint-plugin-next@16.3.0'
@@ -15,3 +19,9 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-x64-msvc@16.3.0'
   - eslint-config-next@16.3.0
   - next@16.3.0
+  - '@supabase/auth-js@2.112.1'
+  - '@supabase/functions-js@2.112.1'
+  - '@supabase/postgrest-js@2.112.1'
+  - '@supabase/realtime-js@2.112.1'
+  - '@supabase/storage-js@2.112.1'
+  - '@supabase/supabase-js@2.112.1'
