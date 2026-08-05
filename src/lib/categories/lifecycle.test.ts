@@ -140,6 +140,22 @@ describe("validateCategoryMutation", () => {
     ).toEqual({ ok: false, reason: "invalid_name" });
   });
 
+  it("rejects create/rename names longer than 80 characters", () => {
+    const long = "а".repeat(81);
+    expect(
+      validateCategoryMutation(null, { type: "create", displayName: long }),
+    ).toEqual({ ok: false, reason: "name_too_long" });
+    expect(
+      validateCategoryMutation(user, { type: "rename", displayName: long }),
+    ).toEqual({ ok: false, reason: "name_too_long" });
+    expect(
+      validateCategoryMutation(null, {
+        type: "create",
+        displayName: "б".repeat(80),
+      }),
+    ).toEqual({ ok: true });
+  });
+
   it("rejects create with duplicate name (case-insensitive)", () => {
     expect(
       validateCategoryMutation(

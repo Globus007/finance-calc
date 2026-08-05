@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   isBlankDisplayName,
   isDuplicateDisplayName,
+  isTooLongDisplayName,
+  MAX_CATEGORY_DISPLAY_NAME_LENGTH,
   normalizeDisplayName,
 } from "./display-name";
 
@@ -16,6 +18,20 @@ describe("isBlankDisplayName", () => {
     expect(isBlankDisplayName("")).toBe(true);
     expect(isBlankDisplayName("   ")).toBe(true);
     expect(isBlankDisplayName("А")).toBe(false);
+  });
+});
+
+describe("isTooLongDisplayName", () => {
+  it("allows up to MAX_CATEGORY_DISPLAY_NAME_LENGTH after normalize", () => {
+    expect(isTooLongDisplayName("а".repeat(MAX_CATEGORY_DISPLAY_NAME_LENGTH))).toBe(
+      false,
+    );
+    expect(
+      isTooLongDisplayName("а".repeat(MAX_CATEGORY_DISPLAY_NAME_LENGTH + 1)),
+    ).toBe(true);
+    expect(
+      isTooLongDisplayName(`  ${"б".repeat(MAX_CATEGORY_DISPLAY_NAME_LENGTH)}  `),
+    ).toBe(false);
   });
 });
 

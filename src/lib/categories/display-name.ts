@@ -1,3 +1,6 @@
+/** Matches manage UI `maxLength={80}`; enforced server-side too. */
+export const MAX_CATEGORY_DISPLAY_NAME_LENGTH = 80;
+
 /** Normalize user-facing Category display name for storage and uniqueness. */
 
 export function normalizeDisplayName(raw: string): string {
@@ -6,6 +9,11 @@ export function normalizeDisplayName(raw: string): string {
 
 export function isBlankDisplayName(raw: string): boolean {
   return normalizeDisplayName(raw).length === 0;
+}
+
+/** True when normalized display name exceeds the shared max length. */
+export function isTooLongDisplayName(raw: string): boolean {
+  return normalizeDisplayName(raw).length > MAX_CATEGORY_DISPLAY_NAME_LENGTH;
 }
 
 /**

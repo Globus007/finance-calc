@@ -4,6 +4,8 @@
 export {
   isBlankDisplayName,
   isDuplicateDisplayName,
+  isTooLongDisplayName,
+  MAX_CATEGORY_DISPLAY_NAME_LENGTH,
   normalizeDisplayName,
 } from "./display-name";
 export { categoryActionErrorMessage } from "./error-messages";

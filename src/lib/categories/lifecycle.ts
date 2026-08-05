@@ -1,4 +1,8 @@
-import { isBlankDisplayName, isDuplicateDisplayName } from "./display-name";
+import {
+  isBlankDisplayName,
+  isDuplicateDisplayName,
+  isTooLongDisplayName,
+} from "./display-name";
 import type { CategoryRow } from "./types";
 
 export type CategoryCapabilities = {
@@ -20,6 +24,7 @@ export type MutationRejection =
   | "forbidden_seed"
   | "in_use"
   | "invalid_name"
+  | "name_too_long"
   | "duplicate_name";
 
 export type MutationResult =
@@ -120,6 +125,9 @@ function validateName(
 ): MutationResult {
   if (isBlankDisplayName(raw)) {
     return { ok: false, reason: "invalid_name" };
+  }
+  if (isTooLongDisplayName(raw)) {
+    return { ok: false, reason: "name_too_long" };
   }
   if (isDuplicateDisplayName(raw, existing, selfId ?? undefined)) {
     return { ok: false, reason: "duplicate_name" };

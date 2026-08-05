@@ -82,13 +82,17 @@ function revalidateCategories() {
 export async function createCategory(
   displayName: string,
 ): Promise<CategoryActionResult> {
-  // async-defer-await: cheap validation before any I/O past auth
-  const blankCheck = validateCategoryMutation(null, {
+  // async-defer-await: shape checks (blank / max length) before auth I/O
+  const shapeCheck = validateCategoryMutation(null, {
     type: "create",
     displayName,
   });
-  if (!blankCheck.ok && blankCheck.reason === "invalid_name") {
-    return { status: "error", reason: "invalid_name" };
+  if (
+    !shapeCheck.ok &&
+    (shapeCheck.reason === "invalid_name" ||
+      shapeCheck.reason === "name_too_long")
+  ) {
+    return { status: "error", reason: shapeCheck.reason };
   }
 
   const { supabase, user } = await requireUser();
@@ -128,12 +132,16 @@ export async function renameCategory(
   id: string,
   displayName: string,
 ): Promise<CategoryActionResult> {
-  const blankCheck = validateCategoryMutation(null, {
+  const shapeCheck = validateCategoryMutation(null, {
     type: "create",
     displayName,
   });
-  if (!blankCheck.ok && blankCheck.reason === "invalid_name") {
-    return { status: "error", reason: "invalid_name" };
+  if (
+    !shapeCheck.ok &&
+    (shapeCheck.reason === "invalid_name" ||
+      shapeCheck.reason === "name_too_long")
+  ) {
+    return { status: "error", reason: shapeCheck.reason };
   }
 
   const { supabase, user } = await requireUser();

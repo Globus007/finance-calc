@@ -12,6 +12,7 @@ import {
 } from "@/app/(app)/categories/actions";
 import { IconArrowLeft } from "@/components/icons";
 // bundle-barrel-imports: direct modules only
+import { MAX_CATEGORY_DISPLAY_NAME_LENGTH } from "@/lib/categories/display-name";
 import { categoryActionErrorMessage } from "@/lib/categories/error-messages";
 import type { CategoryManageItem } from "@/lib/categories/types";
 
@@ -81,7 +82,7 @@ export function CategoriesManage({ initialCategories }: Props) {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Своя категория"
-          maxLength={80}
+          maxLength={MAX_CATEGORY_DISPLAY_NAME_LENGTH}
           disabled={isPending}
           className="min-w-0 flex-1 rounded-2xl border border-[#1A1B2E]/10 bg-white px-3 py-2.5 text-sm outline-none ring-[#5B6CFF]/30 focus:ring-2"
         />
@@ -190,7 +191,7 @@ function CategoryManageRow({
                 type="text"
                 value={renameValue}
                 onChange={(e) => onRenameValueChange(e.target.value)}
-                maxLength={80}
+                maxLength={MAX_CATEGORY_DISPLAY_NAME_LENGTH}
                 disabled={isPending}
                 autoFocus
                 className="w-full rounded-xl border border-[#1A1B2E]/10 px-3 py-2 text-sm outline-none ring-[#5B6CFF]/30 focus:ring-2"
