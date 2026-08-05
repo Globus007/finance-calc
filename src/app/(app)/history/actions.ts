@@ -107,6 +107,8 @@ export async function editCommittedRecord(
     if (!category) return { status: "error", reason: "category_not_found" };
 
     // Hidden Category is allowed only as the record's current value (CONTEXT).
+    // Pre-check for clear UX; DB trigger enforces the same rule atomically so a
+    // concurrent Hide cannot win a check-then-update race (P0002).
     if (
       category.is_hidden &&
       category.id !== (existing.category_id as string)
@@ -125,7 +127,12 @@ export async function editCommittedRecord(
       })
       .eq("id", input.id);
 
-    if (error) return { status: "error", reason: "unavailable" };
+    if (error) {
+      if (error.code === "P0002" || error.message === "category_hidden") {
+        return { status: "error", reason: "category_hidden" };
+      }
+      return { status: "error", reason: "unavailable" };
+    }
 
     revalidateMoneySurfaces();
     revalidatePath(`/history/expense/${input.id}`);
