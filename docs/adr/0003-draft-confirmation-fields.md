@@ -23,7 +23,7 @@ An Expense Draft is exactly one prospective Expense (no multi-item Lines). An In
 
 | Field | Prefill / default |
 |-------|-------------------|
-| Occurred on | Extracted date if present; else user's **local today** (all Channels, Expense and Income) |
+| Occurred on | Extracted date if present; else **today in Europe/Minsk** (all Channels, Expense and Income; ADR-0004—not device TZ) |
 | Amount | Extracted if present; else **empty** (Commit blocked until > 0) |
 | Category (Expense) | Photo/voice: mapped visible Category or System fallback «Прочее»; **manual:** empty until user picks |
 | Note | Extracted/free text or empty |
