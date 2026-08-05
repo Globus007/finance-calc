@@ -54,4 +54,15 @@ describe("HistoryList", () => {
     expect(screen.getByText(/−/)).toBeInTheDocument();
     expect(screen.getByText(/\+/)).toBeInTheDocument();
   });
+
+  it("links each row to Edit / Delete for that committed record", () => {
+    render(<HistoryList items={[expense(), income()]} />);
+
+    expect(
+      screen.getByRole("link", { name: /Редактировать расход Продукты/i }),
+    ).toHaveAttribute("href", "/history/expense/e1");
+    expect(
+      screen.getByRole("link", { name: /Редактировать доход Зарплата/i }),
+    ).toHaveAttribute("href", "/history/income/i1");
+  });
 });

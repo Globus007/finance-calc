@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   IconArrowDownLeft,
   IconArrowUpRight,
@@ -14,7 +15,7 @@ type Props = {
 
 /**
  * Mixed committed History list (Expense + Income by Occurred on).
- * Presentational — data loaded by RSC parents.
+ * Rows link to Edit / Delete. Presentational — data loaded by RSC parents.
  */
 export function HistoryList({
   items,
@@ -47,37 +48,47 @@ function HistoryRow({ item }: { item: HistoryItem }) {
     !isIncome && item.note ? item.note : null,
     channelLabelRu(item.channel),
   ].filter(Boolean);
+  const href = `/history/${item.kind}/${item.id}`;
+  const a11yLabel = isIncome
+    ? `Редактировать доход ${title}`
+    : `Редактировать расход ${title}`;
 
   return (
-    <li className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-[0_4px_16px_-8px_rgba(26,27,46,0.12)]">
-      <div
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-          isIncome
-            ? "bg-[#D1FAE5] text-[#059669]"
-            : "bg-[#FFEDD5] text-[#EA580C]"
-        }`}
-        aria-hidden
+    <li>
+      <Link
+        href={href}
+        aria-label={a11yLabel}
+        className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-[0_4px_16px_-8px_rgba(26,27,46,0.12)] transition active:scale-[0.99]"
       >
-        {isIncome ? (
-          <IconArrowDownLeft size={18} />
-        ) : (
-          <IconArrowUpRight size={18} />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{title}</p>
-        <p className="truncate text-[11px] text-[#1A1B2E]/40">
-          {subtitleParts.join(" · ")}
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+            isIncome
+              ? "bg-[#D1FAE5] text-[#059669]"
+              : "bg-[#FFEDD5] text-[#EA580C]"
+          }`}
+          aria-hidden
+        >
+          {isIncome ? (
+            <IconArrowDownLeft size={18} />
+          ) : (
+            <IconArrowUpRight size={18} />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{title}</p>
+          <p className="truncate text-[11px] text-[#1A1B2E]/40">
+            {subtitleParts.join(" · ")}
+          </p>
+        </div>
+        <p
+          className={`shrink-0 text-sm font-bold tabular-nums ${
+            isIncome ? "text-[#059669]" : "text-[#1A1B2E]"
+          }`}
+        >
+          {isIncome ? "+" : "−"}
+          {formatByn(item.amount)}
         </p>
-      </div>
-      <p
-        className={`shrink-0 text-sm font-bold tabular-nums ${
-          isIncome ? "text-[#059669]" : "text-[#1A1B2E]"
-        }`}
-      >
-        {isIncome ? "+" : "−"}
-        {formatByn(item.amount)}
-      </p>
+      </Link>
     </li>
   );
 }
