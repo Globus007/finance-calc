@@ -156,6 +156,15 @@ export function VoiceShell({
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Cancelled (dismiss / left recording surface) while awaiting permission:
+      // cleanupRecorder resets startingRef, so we must not resurrect the mic or
+      // feed a late Blob into the pipeline (ADR-0005).
+      if (!startingRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
       mediaStreamRef.current = stream;
 
       const mime = pickRecorderMimeType();

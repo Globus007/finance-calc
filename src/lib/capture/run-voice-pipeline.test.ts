@@ -143,6 +143,28 @@ describe("runVoicePipeline", () => {
     expect(result).toEqual({ status: "extraction_failure" });
   });
 
+  it("purges temp object when extract returns unauthenticated (server skipped delete)", async () => {
+    const deleteTemp = vi.fn(async () => ({ status: "ok" as const }));
+    const result = await runVoicePipeline(makeBlob(), {
+      deps: {
+        isOnline: () => true,
+        createUpload: async () => ({
+          status: "ok",
+          path: "user/id.webm",
+          token: "tok",
+        }),
+        uploadBlob: async () => ({ error: null }),
+        extract: async () => ({
+          status: "error",
+          reason: "unauthenticated",
+        }),
+        deleteTemp,
+      },
+    });
+    expect(result).toEqual({ status: "extraction_failure" });
+    expect(deleteTemp).toHaveBeenCalledWith({ path: "user/id.webm" });
+  });
+
   it("deletes temp object when extract rejects after upload", async () => {
     const deleteTemp = vi.fn(async () => ({ status: "ok" as const }));
     const result = await runVoicePipeline(makeBlob(), {
