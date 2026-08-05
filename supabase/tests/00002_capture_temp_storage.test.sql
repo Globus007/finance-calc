@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(8);
+select plan(10);
 
 -- ---------------------------------------------------------------------------
 -- Bucket configuration
@@ -97,6 +97,25 @@ select ok(
     limit 1
   ),
   'cleanup function documents TTL max-age parameter'
+);
+
+-- ---------------------------------------------------------------------------
+-- Scheduled orphan cleanup (ADR-0005 1h TTL) must be registered — not optional
+-- ---------------------------------------------------------------------------
+select ok(
+  exists (select 1 from pg_extension where extname = 'pg_cron'),
+  'pg_cron extension is installed for orphan TTL'
+);
+
+select ok(
+  exists (
+    select 1
+    from cron.job
+    where jobname = 'cleanup-capture-temp-orphans'
+      and active
+      and command ilike '%cleanup_capture_temp_orphans%'
+  ),
+  'active cron job schedules cleanup_capture_temp_orphans'
 );
 
 select * from finish();

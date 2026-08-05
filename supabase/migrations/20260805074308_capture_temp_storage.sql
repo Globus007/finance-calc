@@ -106,27 +106,42 @@ comment on function public.cleanup_capture_temp_orphans(interval, integer) is
 revoke all on function public.cleanup_capture_temp_orphans(interval, integer) from public;
 grant execute on function public.cleanup_capture_temp_orphans(interval, integer) to service_role;
 
--- Schedule every 15 minutes when pg_cron is available (hosted Supabase / local with extension).
+-- Schedule every 15 minutes. ADR-0005 requires a 1h orphan TTL safety net — migration
+-- must fail if the job cannot be registered (no silent skip that leaves orphans forever).
+create extension if not exists pg_cron with schema pg_catalog;
+
 do $$
+declare
+  v_job_id bigint;
 begin
-  create extension if not exists pg_cron with schema pg_catalog;
+  -- Idempotent: drop previous schedule by name if present.
+  if exists (
+    select 1 from cron.job where jobname = 'cleanup-capture-temp-orphans'
+  ) then
+    perform cron.unschedule(jobid)
+    from cron.job
+    where jobname = 'cleanup-capture-temp-orphans';
+  end if;
 
-  perform cron.unschedule(jobid)
-  from cron.job
-  where jobname = 'cleanup-capture-temp-orphans';
-
-  perform cron.schedule(
+  select cron.schedule(
     'cleanup-capture-temp-orphans',
     '*/15 * * * *',
     $cron$select public.cleanup_capture_temp_orphans(interval '1 hour', 500);$cron$
-  );
-exception
-  when undefined_table then
-    -- cron.job missing (extension not fully available); bucket + function still usable.
-    raise notice 'pg_cron not available; schedule cleanup_capture_temp_orphans externally';
-  when insufficient_privilege then
-    raise notice 'pg_cron not privileged; schedule cleanup_capture_temp_orphans externally';
-  when others then
-    raise notice 'pg_cron schedule skipped: %', sqlerrm;
+  ) into v_job_id;
+
+  if v_job_id is null then
+    raise exception
+      'failed to schedule cleanup-capture-temp-orphans (cron.schedule returned null)';
+  end if;
+
+  if not exists (
+    select 1
+    from cron.job
+    where jobname = 'cleanup-capture-temp-orphans'
+      and active
+  ) then
+    raise exception
+      'cleanup-capture-temp-orphans cron job missing or inactive after schedule';
+  end if;
 end;
 $$;
