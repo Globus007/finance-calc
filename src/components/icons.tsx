@@ -144,3 +144,45 @@ export function IconArrowLeft({ className, size = 16 }: IconProps) {
     </svg>
   );
 }
+
+/** Income inflow affordance (arrow down-left into wallet). */
+export function IconArrowDownLeft({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <line x1="17" y1="7" x2="7" y2="17" />
+      <polyline points="17 17 7 17 7 7" />
+    </svg>
+  );
+}
+
+/** Expense outflow affordance (arrow up-right out of wallet). */
+export function IconArrowUpRight({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <line x1="7" y1="17" x2="17" y2="7" />
+      <polyline points="7 7 17 7 17 17" />
+    </svg>
+  );
+}
