@@ -60,6 +60,22 @@ export function isUserCapturePath(userId: string, path: string): boolean {
   return true;
 }
 
+/**
+ * Structural shape of a capture-temp object path: `{ownerId}/{name.ext}`
+ * with a single nested segment and no traversal. Whether the ownerId matches
+ * the caller is checked separately by `isUserCapturePath` for authenticated
+ * callers; this guard is used for best-effort orphan purges when the session
+ * has already expired (ADR-0005).
+ */
+export function looksLikeCaptureObjectPath(path: string): boolean {
+  if (!path || path.includes("..") || path.startsWith("/")) return false;
+  const slash = path.indexOf("/");
+  if (slash <= 0) return false;
+  if (path.indexOf("/", slash + 1) !== -1) return false; // single nested segment
+  const rest = path.slice(slash + 1);
+  return rest.length > 0 && rest.includes(".");
+}
+
 /** Build object path for a new Receipt upload. */
 export function buildPhotoObjectPath(
   userId: string,

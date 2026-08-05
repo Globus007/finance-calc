@@ -6,6 +6,7 @@ import {
   buildPhotoObjectPath,
   isAllowedPhotoMime,
   isUserCapturePath,
+  looksLikeCaptureObjectPath,
   normalizeMime,
   type PhotoMime,
 } from "@/lib/capture/photo-limits";
@@ -180,15 +181,24 @@ export async function extractPhotoDraft(input: {
 }
 
 /**
- * Best-effort delete of a user-prefix temp object (cancel after upload, etc.).
- * Path must stay under the session user; service role performs the delete.
+ * Best-effort delete of a capture-temp object (cancel after upload, purge
+ * after a non-ok extract, etc.). Authenticated callers may only delete within
+ * their own prefix; the session user owns the path. When the session has
+ * expired mid-pipeline the object is an orphan (ADR-0005) — purge it anyway so
+ * sensitive media does not linger until the bucket TTL. The path was
+ * server-issued at createUpload time and is `{userUUID}/{objectUUID}.ext`, so
+ * a structurally valid path is safe for the service role to delete (Storage
+ * `remove` is delete-only and the bucket is private + 1h-TTL ephemeral).
  */
 export async function deleteCaptureTempObject(input: {
   path: string;
-}): Promise<{ status: "ok" } | { status: "error"; reason: "unauthenticated" | "invalid_path" }> {
+}): Promise<{ status: "ok" } | { status: "error"; reason: "invalid_path" }> {
   const { user } = await requireUser();
-  if (!user) return { status: "error", reason: "unauthenticated" };
-  if (!isUserCapturePath(user.id, input.path)) {
+  if (user) {
+    if (!isUserCapturePath(user.id, input.path)) {
+      return { status: "error", reason: "invalid_path" };
+    }
+  } else if (!looksLikeCaptureObjectPath(input.path)) {
     return { status: "error", reason: "invalid_path" };
   }
   await bestEffortDelete(input.path);
