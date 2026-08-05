@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { isCaptureSecureContext } from "@/lib/capture/constraints";
 import {
   PHOTO_CANCEL_LABEL,
   PHOTO_EXTRACTION_FAILURE,
@@ -25,6 +26,8 @@ type Props = {
   onPermissionDenied?: () => void;
   /** Device capture unavailable (no mediaDevices / other). */
   onCaptureUnavailable?: () => void;
+  /** Non-HTTPS / non-localhost — getUserMedia blocked. */
+  onInsecureContext?: () => void;
   /** Auto-open capture when entering pick (recapture / dock open). */
   autoOpenCapture?: boolean;
 };
@@ -41,6 +44,7 @@ export function PhotoShell({
   onDismiss,
   onPermissionDenied,
   onCaptureUnavailable,
+  onInsecureContext,
   autoOpenCapture = false,
 }: Props) {
   const captureInputRef = useRef<HTMLInputElement>(null);
@@ -55,6 +59,10 @@ export function PhotoShell({
    * surface a pre-capture permission error (ADR-0008) instead of a silent cancel.
    */
   const openCapture = useCallback(async () => {
+    if (!isCaptureSecureContext()) {
+      onInsecureContext?.();
+      return;
+    }
     if (
       typeof navigator === "undefined" ||
       !navigator.mediaDevices?.getUserMedia
@@ -86,7 +94,7 @@ export function PhotoShell({
       // Other errors: fall back to file input (may still open gallery on desktop).
       captureInputRef.current?.click();
     }
-  }, [onPermissionDenied, onCaptureUnavailable]);
+  }, [onPermissionDenied, onCaptureUnavailable, onInsecureContext]);
 
   useEffect(() => {
     if (mode.name === "pick" && autoOpenCapture) {
@@ -181,7 +189,8 @@ export function PhotoShell({
             onPrimary={() => {
               if (
                 mode.reason === "permission" ||
-                mode.reason === "unavailable"
+                mode.reason === "unavailable" ||
+                mode.reason === "insecure"
               ) {
                 openGallery();
               } else {

@@ -99,4 +99,21 @@ describe("VoiceShell", () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it("shows pre-capture insecure (HTTPS) message", () => {
+    render(
+      <VoiceShell
+        mode={{ name: "pre-error", reason: "insecure" }}
+        {...baseProps}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: VOICE_PRE_CAPTURE_MESSAGES.insecure.title,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(VOICE_PRE_CAPTURE_MESSAGES.insecure.body),
+    ).toBeInTheDocument();
+  });
 });

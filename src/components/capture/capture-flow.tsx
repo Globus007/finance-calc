@@ -402,6 +402,9 @@ export function CaptureLayer() {
           onCaptureUnavailable={() => {
             setPhotoPreError("unavailable");
           }}
+          onInsecureContext={() => {
+            setPhotoPreError("insecure");
+          }}
         />
       ) : null}
 

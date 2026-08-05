@@ -7,6 +7,7 @@ import {
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import type { Draft } from "@/lib/draft/types";
 import { createClient } from "@/lib/supabase/client";
+import { isCaptureOnline } from "./constraints";
 import type { VoicePreCaptureReason } from "./messages";
 import {
   CAPTURE_TEMP_BUCKET,
@@ -58,7 +59,7 @@ export async function runVoicePipeline(
   const createUpload = deps.createUpload ?? createVoiceUpload;
   const extract = deps.extract ?? extractVoiceDraft;
   const deleteTemp = deps.deleteTemp ?? deleteCaptureTempObject;
-  const isOnline = deps.isOnline ?? (() => navigator.onLine);
+  const isOnline = deps.isOnline ?? (() => isCaptureOnline());
   const uploadBlob = deps.uploadBlob ?? defaultUpload;
   const checkMeta = deps.checkMeta ?? checkVoiceFileMeta;
 

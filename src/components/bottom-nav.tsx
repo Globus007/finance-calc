@@ -24,7 +24,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="relative z-10 border-t border-white/60 bg-white/90 px-2 pb-3 pt-2 backdrop-blur-md"
+      className="relative z-10 border-t border-white/60 bg-white/90 px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-md"
       aria-label="Основная навигация"
       // Hide dock chrome under full-screen capture so confirm is uncluttered.
       hidden={isCaptureOpen}

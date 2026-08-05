@@ -1,6 +1,6 @@
 /**
  * Auth routing policy for the MVP shell.
- * Public: login + magic-link confirm (PKCE / token_hash).
+ * Public: login (in-app OTP) + secondary magic-link confirm (PKCE / token_hash).
  * Everything else requires a cookie session (enforced in proxy).
  */
 
