@@ -14,11 +14,11 @@ const PEN_ICON = <IconPen size={20} />;
 
 /**
  * Home chrome bottom bar: Домой | photo · big mic · manual | Месяц.
- * Manual opens Draft capture; photo/voice stay stubs until later tickets.
+ * Photo and manual open capture; voice stays stub until later ticket.
  */
 export function BottomNav() {
   const pathname = usePathname();
-  const { openManual, isCaptureOpen } = useCapture();
+  const { openManual, openPhoto, isCaptureOpen } = useCapture();
   const onHome = pathname === "/";
   const onMonth = pathname === "/month" || pathname.startsWith("/month/");
 
@@ -39,10 +39,9 @@ export function BottomNav() {
         >
           <button
             type="button"
+            onClick={openPhoto}
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-[#FF8A4C] transition hover:bg-[#FFF7ED] active:scale-95"
             aria-label="Фото чека"
-            disabled
-            title="Скоро"
           >
             {CAMERA_ICON}
           </button>

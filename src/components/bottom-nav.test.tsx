@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BottomNav } from "./bottom-nav";
 
 const openManual = vi.fn();
+const openPhoto = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -12,6 +13,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/capture/capture-flow", () => ({
   useCapture: () => ({
     openManual,
+    openPhoto,
     isCaptureOpen: false,
   }),
 }));
@@ -19,6 +21,7 @@ vi.mock("@/components/capture/capture-flow", () => ({
 afterEach(() => {
   cleanup();
   openManual.mockClear();
+  openPhoto.mockClear();
 });
 
 describe("BottomNav chrome", () => {
@@ -43,5 +46,13 @@ describe("BottomNav chrome", () => {
 
     await user.click(screen.getByRole("button", { name: "Вручную" }));
     expect(openManual).toHaveBeenCalledOnce();
+  });
+
+  it("opens photo capture from the camera control", async () => {
+    const user = userEvent.setup();
+    render(<BottomNav />);
+
+    await user.click(screen.getByRole("button", { name: "Фото чека" }));
+    expect(openPhoto).toHaveBeenCalledOnce();
   });
 });

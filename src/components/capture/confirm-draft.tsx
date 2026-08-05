@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   commitDraft,
+  commitPhotoDraft,
   type CommitDraftResult,
 } from "@/app/(app)/capture/actions";
 import type { CategoryPickerItem } from "@/lib/categories/types";
@@ -11,20 +12,26 @@ import type { Draft } from "@/lib/draft/types";
 import { canCommit } from "@/lib/draft/validate-commit";
 import { MAX_NOTE_LENGTH } from "@/lib/draft/normalize-note";
 
+type CommitInput = {
+  kind: Draft["kind"];
+  amount: string;
+  occurredOn: string;
+  categoryId: string;
+  note: string;
+};
+
 type Props = {
   initialDraft: Draft;
   categories: CategoryPickerItem[];
   onDiscard: () => void;
   onCommitted: () => void;
-  /** Injectable for tests; defaults to server action. Channel is server-set. */
-  commitFn?: (input: {
-    kind: Draft["kind"];
-    amount: string;
-    occurredOn: string;
-    categoryId: string;
-    note: string;
-  }) => Promise<CommitDraftResult>;
+  /** Injectable for tests; defaults by channel (manual vs photo). */
+  commitFn?: (input: CommitInput) => Promise<CommitDraftResult>;
 };
+
+function defaultCommitFor(draft: Draft) {
+  return draft.channel === "photo" ? commitPhotoDraft : commitDraft;
+}
 
 /**
  * Confirm form for one in-flight Draft (ADR-0003).
@@ -35,8 +42,9 @@ export function ConfirmDraft({
   categories,
   onDiscard,
   onCommitted,
-  commitFn = commitDraft,
+  commitFn,
 }: Props) {
+  const resolveCommit = commitFn ?? defaultCommitFor(initialDraft);
   const [draft, setDraft] = useState<Draft>(initialDraft);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -54,7 +62,7 @@ export function ConfirmDraft({
 
     setError(null);
     startTransition(async () => {
-      const result = await commitFn({
+      const result = await resolveCommit({
         kind: draft.kind,
         amount: draft.amount,
         occurredOn: draft.occurredOn,

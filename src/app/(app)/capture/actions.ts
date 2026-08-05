@@ -8,12 +8,9 @@ import {
 import { sortCategoriesForManage } from "@/lib/categories/sort-categories";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import type { CommitActionError } from "@/lib/draft/error-messages";
-import type { Draft, RecordKind } from "@/lib/draft/types";
+import type { CaptureChannel, Draft, RecordKind } from "@/lib/draft/types";
 import { validateCommit } from "@/lib/draft/validate-commit";
 import { createClient } from "@/lib/supabase/server";
-
-/** Channel for this action — never taken from the client (issue #25 manual path). */
-const MANUAL_CHANNEL = "manual" as const;
 
 export type CommitDraftResult =
   | { status: "ok"; id: string }
@@ -25,7 +22,8 @@ export type LoadPickerCategoriesResult =
 
 /**
  * Confirm form payload. Channel is omitted on purpose: the server sets
- * `manual` so a client cannot forge photo/voice provenance.
+ * channel from the commit action (manual vs photo) so a client cannot forge
+ * provenance across capture paths.
  */
 export type CommitDraftInput = {
   kind: RecordKind;
@@ -87,9 +85,25 @@ export async function loadPickerCategories(): Promise<LoadPickerCategoriesResult
 export async function commitDraft(
   input: CommitDraftInput,
 ): Promise<CommitDraftResult> {
+  return commitWithChannel(input, "manual");
+}
+
+/**
+ * Commit a photo Expense Draft: channel forced to `photo`, kind forced to expense.
+ */
+export async function commitPhotoDraft(
+  input: CommitDraftInput,
+): Promise<CommitDraftResult> {
+  return commitWithChannel({ ...input, kind: "expense" }, "photo");
+}
+
+async function commitWithChannel(
+  input: CommitDraftInput,
+  channel: CaptureChannel,
+): Promise<CommitDraftResult> {
   const draft: Draft = {
     kind: input.kind,
-    channel: MANUAL_CHANNEL,
+    channel,
     amount: input.amount,
     occurredOn: input.occurredOn,
     categoryId: input.categoryId,
@@ -128,7 +142,7 @@ export async function commitDraft(
         occurred_on: validation.occurredOn,
         category_id: categoryId,
         note: validation.note,
-        channel: MANUAL_CHANNEL,
+        channel,
       })
       .select("id")
       .single();
@@ -142,6 +156,11 @@ export async function commitDraft(
     return { status: "ok", id: data.id as string };
   }
 
+  // Income: photo channel is rejected by validateCommit; only manual/voice.
+  if (channel === "photo") {
+    return { status: "error", reason: "invalid_channel_for_kind" };
+  }
+
   const { data, error } = await supabase
     .from("incomes")
     .insert({
@@ -149,7 +168,7 @@ export async function commitDraft(
       amount: validation.amount,
       occurred_on: validation.occurredOn,
       note: validation.note,
-      channel: MANUAL_CHANNEL,
+      channel,
     })
     .select("id")
     .single();
