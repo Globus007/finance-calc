@@ -10,6 +10,9 @@ importers:
 
   .:
     dependencies:
+      '@honeybadger-io/js':
+        specifier: ^6.16.0
+        version: 6.16.0
       '@honeybadger-io/react':
         specifier: ^6.1.30
         version: 6.1.30(@honeybadger-io/js@6.16.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)

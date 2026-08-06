@@ -1,6 +1,11 @@
 "use server";
 
 import {
+  createExtractLogger,
+  fieldPresenceFromDraft,
+  timed,
+} from "@/lib/capture/extract-log";
+import {
   CAPTURE_TEMP_BUCKET,
   VOICE_MAX_BYTES,
   buildVoiceObjectPath,
@@ -19,6 +24,7 @@ import {
   draftFromNormalized,
   normalizeExtract,
 } from "@/lib/extract/normalize-extract";
+import { getSttModel, getTextExtractModel } from "@/lib/extract/schema";
 import { isUsableTranscript, transcribeRecording } from "@/lib/extract/stt";
 import { extractFromVoiceTranscript } from "@/lib/extract/voice-transcript";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -91,27 +97,40 @@ export async function createVoiceUpload(input: {
 export async function extractVoiceDraft(input: {
   path: string;
 }): Promise<ExtractVoiceDraftResult> {
+  const log = createExtractLogger({ channel: "voice", path: input.path });
+
   const { supabase, user } = await requireUser();
-  if (!user) return { status: "error", reason: "unauthenticated" };
+  if (!user) {
+    log.early("unauthenticated");
+    return { status: "error", reason: "unauthenticated" };
+  }
 
   if (!isUserCapturePath(user.id, input.path)) {
+    log.early("invalid_path");
     return { status: "error", reason: "invalid_path" };
   }
 
-  const [categoriesResult, fallbackResult] = await Promise.all([
-    supabase
-      .from("categories")
-      .select(CATEGORY_SELECT)
-      .eq("is_hidden", false),
-    supabase
-      .from("categories")
-      .select("id")
-      .eq("is_system_fallback", true)
-      .maybeSingle(),
-  ]);
+  log.breadcrumb("load_categories");
+  const [categoriesResult, fallbackResult] = await timed(
+    log,
+    "load_categories",
+    () =>
+      Promise.all([
+        supabase
+          .from("categories")
+          .select(CATEGORY_SELECT)
+          .eq("is_hidden", false),
+        supabase
+          .from("categories")
+          .select("id")
+          .eq("is_system_fallback", true)
+          .maybeSingle(),
+      ]),
+  );
 
   if (categoriesResult.error || fallbackResult.error || !fallbackResult.data) {
     await bestEffortDelete(input.path);
+    log.early("categories_unavailable", "load_categories");
     return { status: "error", reason: "unavailable" };
   }
 
@@ -125,47 +144,93 @@ export async function extractVoiceDraft(input: {
   let bytes: Uint8Array;
   let mimeType: string;
 
+  log.breadcrumb("download");
   try {
     const admin = createAdminClient();
-    const { data: blob, error: downloadError } = await admin.storage
-      .from(CAPTURE_TEMP_BUCKET)
-      .download(input.path);
+    const { data: blob, error: downloadError } = await timed(
+      log,
+      "download",
+      async () =>
+        admin.storage.from(CAPTURE_TEMP_BUCKET).download(input.path),
+    );
 
     if (downloadError || !blob) {
       await bestEffortDelete(input.path);
+      log.fail({
+        step: "download",
+        reason: "download_failed",
+        err: downloadError
+          ? new Error(downloadError.message)
+          : new Error("empty blob"),
+      });
       return { status: "error", reason: "extraction_failure" };
     }
 
+    log.breadcrumb("validate_media");
     if (blob.size > VOICE_MAX_BYTES) {
       await bestEffortDelete(input.path);
+      log.fail({
+        step: "validate_media",
+        reason: "invalid_media",
+        err: new Error("voice exceeds max bytes"),
+      });
       return { status: "error", reason: "extraction_failure" };
     }
 
     const resolvedMime = blob.type || mimeFromPath(input.path);
     if (!canonicalVoiceMime(resolvedMime)) {
       await bestEffortDelete(input.path);
+      log.fail({
+        step: "validate_media",
+        reason: "invalid_media",
+        err: new Error(`unsupported mime: ${resolvedMime}`),
+      });
       return { status: "error", reason: "extraction_failure" };
     }
 
     const buffer = new Uint8Array(await blob.arrayBuffer());
     bytes = buffer;
     mimeType = resolvedMime;
-  } catch {
+  } catch (err) {
+    await bestEffortDelete(input.path);
+    log.fail({ step: "download", reason: "download_failed", err });
+    return { status: "error", reason: "extraction_failure" };
+  }
+
+  let text: string;
+  try {
+    log.breadcrumb("stt");
+    const stt = await timed(log, "stt", () =>
+      transcribeRecording({ bytes, mimeType }),
+    );
+    text = stt.text;
+  } catch (err) {
+    log.fail({ step: "stt", reason: "stt_failed", err });
+    await bestEffortDelete(input.path);
+    return { status: "error", reason: "extraction_failure" };
+  }
+
+  if (!isUsableTranscript(text)) {
+    log.fail({
+      step: "empty_transcript",
+      reason: "empty_transcript",
+      err: new Error("STT returned empty or whitespace-only transcript"),
+    });
     await bestEffortDelete(input.path);
     return { status: "error", reason: "extraction_failure" };
   }
 
   try {
-    const { text } = await transcribeRecording({ bytes, mimeType });
-    if (!isUsableTranscript(text)) {
-      return { status: "error", reason: "extraction_failure" };
-    }
+    log.breadcrumb("text_extract");
+    const raw = await timed(log, "text_extract", () =>
+      extractFromVoiceTranscript({
+        transcript: text,
+        visibleCategories,
+      }),
+    );
 
-    const raw = await extractFromVoiceTranscript({
-      transcript: text,
-      visibleCategories,
-    });
-
+    log.breadcrumb("normalize");
+    const t0 = performance.now();
     const normalized = normalizeExtract({
       raw,
       channel: "voice",
@@ -173,15 +238,29 @@ export async function extractVoiceDraft(input: {
       visibleCategories,
       systemFallbackCategoryId,
     });
+    log.setTiming("normalize", performance.now() - t0);
 
     const draft = draftFromNormalized(normalized, "voice");
+
+    log.success({
+      field_presence: fieldPresenceFromDraft(draft),
+      models: {
+        stt: getSttModel(),
+        text_extract: getTextExtractModel(),
+      },
+    });
 
     return {
       status: "ok",
       draft,
       categories: visibleCategories satisfies CategoryPickerItem[],
     };
-  } catch {
+  } catch (err) {
+    log.fail({
+      step: "text_extract",
+      reason: "text_extract_failed",
+      err,
+    });
     return { status: "error", reason: "extraction_failure" };
   } finally {
     await bestEffortDelete(input.path);

@@ -1,6 +1,11 @@
 "use server";
 
 import {
+  createExtractLogger,
+  fieldPresenceFromDraft,
+  timed,
+} from "@/lib/capture/extract-log";
+import {
   CAPTURE_TEMP_BUCKET,
   PHOTO_MAX_BYTES,
   buildPhotoObjectPath,
@@ -21,6 +26,7 @@ import {
   draftFromNormalized,
   normalizeExtract,
 } from "@/lib/extract/normalize-extract";
+import { getVisionModel } from "@/lib/extract/schema";
 import { extractReceiptFields } from "@/lib/extract/vision-receipt";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -91,29 +97,41 @@ export async function createPhotoUpload(input: {
 export async function extractPhotoDraft(input: {
   path: string;
 }): Promise<ExtractPhotoDraftResult> {
+  const log = createExtractLogger({ channel: "photo", path: input.path });
+
   const { supabase, user } = await requireUser();
-  if (!user) return { status: "error", reason: "unauthenticated" };
+  if (!user) {
+    log.early("unauthenticated");
+    return { status: "error", reason: "unauthenticated" };
+  }
 
   if (!isUserCapturePath(user.id, input.path)) {
+    log.early("invalid_path");
     return { status: "error", reason: "invalid_path" };
   }
 
+  log.breadcrumb("load_categories");
   // Visible categories + system fallback for normalize (async-parallel).
-  const [categoriesResult, fallbackResult] = await Promise.all([
-    supabase
-      .from("categories")
-      .select(CATEGORY_SELECT)
-      .eq("is_hidden", false),
-    supabase
-      .from("categories")
-      .select("id")
-      .eq("is_system_fallback", true)
-      .maybeSingle(),
-  ]);
+  const [categoriesResult, fallbackResult] = await timed(
+    log,
+    "load_categories",
+    () =>
+      Promise.all([
+        supabase
+          .from("categories")
+          .select(CATEGORY_SELECT)
+          .eq("is_hidden", false),
+        supabase
+          .from("categories")
+          .select("id")
+          .eq("is_system_fallback", true)
+          .maybeSingle(),
+      ]),
+  );
 
   if (categoriesResult.error || fallbackResult.error || !fallbackResult.data) {
-    // Still try to delete the object if present.
     await bestEffortDelete(input.path);
+    log.early("categories_unavailable", "load_categories");
     return { status: "error", reason: "unavailable" };
   }
 
@@ -127,37 +145,67 @@ export async function extractPhotoDraft(input: {
   let bytes: Uint8Array;
   let mimeType: string;
 
+  log.breadcrumb("download");
   try {
     const admin = createAdminClient();
-    const { data: blob, error: downloadError } = await admin.storage
-      .from(CAPTURE_TEMP_BUCKET)
-      .download(input.path);
+    const { data: blob, error: downloadError } = await timed(
+      log,
+      "download",
+      async () =>
+        admin.storage.from(CAPTURE_TEMP_BUCKET).download(input.path),
+    );
 
     if (downloadError || !blob) {
       await bestEffortDelete(input.path);
+      log.fail({
+        step: "download",
+        reason: "download_failed",
+        err: downloadError
+          ? new Error(downloadError.message)
+          : new Error("empty blob"),
+      });
       return { status: "error", reason: "extraction_failure" };
     }
 
+    log.breadcrumb("validate_media");
     if (blob.size > PHOTO_MAX_BYTES) {
       await bestEffortDelete(input.path);
+      log.fail({
+        step: "validate_media",
+        reason: "invalid_media",
+        err: new Error("photo exceeds max bytes"),
+      });
       return { status: "error", reason: "extraction_failure" };
     }
 
     const buffer = new Uint8Array(await blob.arrayBuffer());
     bytes = buffer;
     mimeType = blob.type || mimeFromPath(input.path);
-  } catch {
+  } catch (err) {
+    await bestEffortDelete(input.path);
+    log.fail({ step: "download", reason: "download_failed", err });
+    return { status: "error", reason: "extraction_failure" };
+  }
+
+  let raw: Awaited<ReturnType<typeof extractReceiptFields>>;
+  try {
+    log.breadcrumb("vision");
+    raw = await timed(log, "vision", () =>
+      extractReceiptFields({
+        bytes,
+        mimeType,
+        visibleCategories,
+      }),
+    );
+  } catch (err) {
+    log.fail({ step: "vision", reason: "vision_failed", err });
     await bestEffortDelete(input.path);
     return { status: "error", reason: "extraction_failure" };
   }
 
   try {
-    const raw = await extractReceiptFields({
-      bytes,
-      mimeType,
-      visibleCategories,
-    });
-
+    log.breadcrumb("normalize");
+    const t0 = performance.now();
     const normalized = normalizeExtract({
       raw,
       channel: "photo",
@@ -165,15 +213,22 @@ export async function extractPhotoDraft(input: {
       visibleCategories,
       systemFallbackCategoryId,
     });
+    log.setTiming("normalize", performance.now() - t0);
 
     const draft = draftFromNormalized(normalized, "photo");
+
+    log.success({
+      field_presence: fieldPresenceFromDraft(draft),
+      models: { vision: getVisionModel() },
+    });
 
     return {
       status: "ok",
       draft,
       categories: visibleCategories satisfies CategoryPickerItem[],
     };
-  } catch {
+  } catch (err) {
+    log.fail({ step: "normalize", reason: "unexpected", err });
     return { status: "error", reason: "extraction_failure" };
   } finally {
     await bestEffortDelete(input.path);
