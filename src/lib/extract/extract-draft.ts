@@ -12,7 +12,7 @@
  * Categories + System fallback load; admin download of the temp object;
  * channel size/MIME validation; channel adapters; normalize → Draft; eager
  * best-effort purge on all terminal paths (ADR-0005); return picker Categories
- * on success.
+ * on success; step-level observability (console + Honeybadger breadcrumbs).
  *
  * Not owned here (decision #5): signed upload URL creation; cancel/orphan
  * purge from client pipelines — those live in `lib/capture/capture-temp`.
@@ -21,6 +21,12 @@
  * Storage; production callers pass nothing.
  */
 
+import {
+  createExtractLogger,
+  fieldPresenceFromDraft,
+  timed,
+  type ExtractAttemptLogger,
+} from "@/lib/capture/extract-log";
 import {
   CATEGORY_SELECT,
   mapCategoryRow,
@@ -39,7 +45,12 @@ import { VOICE_MAX_BYTES, canonicalVoiceMime } from "@/lib/capture/voice-limits"
 import { bestEffortDeleteStorageObject } from "@/lib/capture/capture-temp";
 import { draftFromNormalized, normalizeExtract } from "./normalize-extract";
 import type { VisibleCategoryRef } from "./normalize-extract";
-import type { ExtractModelOutput } from "./schema";
+import {
+  getSttModel,
+  getTextExtractModel,
+  getVisionModel,
+  type ExtractModelOutput,
+} from "./schema";
 import { extractReceiptFields, type VisionReceiptInput } from "./vision-receipt";
 import {
   isUsableTranscript,
@@ -126,73 +137,186 @@ export async function extractDraft(
   input: { path: string; channel: ExtractChannel },
   deps: ExtractDraftDeps = {},
 ): Promise<ExtractionResult> {
+  const log = createExtractLogger({
+    channel: input.channel,
+    path: input.path,
+  });
+
   const session = await (deps.loadSession ?? defaultLoadSession)();
   if (!session.userId) {
+    log.early("unauthenticated");
     return { status: "error", reason: "unauthenticated" };
   }
 
   if (!isUserCapturePath(session.userId, input.path)) {
+    log.early("invalid_path");
     return { status: "error", reason: "invalid_path" };
   }
 
-  const ctx = await (deps.loadCategoryContext ?? defaultLoadCategoryContext)();
+  log.breadcrumb("load_categories");
+  const ctx = await timed(log, "load_categories", () =>
+    (deps.loadCategoryContext ?? defaultLoadCategoryContext)(),
+  );
   if (!ctx.ok) {
     await purgeTemp(input.path, deps);
+    log.early("categories_unavailable", "load_categories");
     return { status: "error", reason: "unavailable" };
   }
 
-  const media = await (deps.downloadTempObject ?? defaultDownloadTempObject)(
-    input.path,
+  log.breadcrumb("download");
+  const media = await timed(log, "download", () =>
+    (deps.downloadTempObject ?? defaultDownloadTempObject)(input.path),
   );
   if (!media) {
     await purgeTemp(input.path, deps);
+    log.fail({
+      step: "download",
+      reason: "download_failed",
+      err: new Error("download miss or empty blob"),
+    });
     return { status: "error", reason: "extraction_failure" };
   }
 
+  log.breadcrumb("validate_media");
   const sizeCheck = checkChannelMedia(input.channel, media);
   if (!sizeCheck.ok) {
     await purgeTemp(input.path, deps);
+    log.fail({
+      step: "validate_media",
+      reason: "invalid_media",
+      err: new Error(sizeCheck.detail),
+    });
     return { status: "error", reason: "extraction_failure" };
   }
 
   try {
     if (input.channel === "photo") {
-      const raw = await (deps.extractReceipt ?? extractReceiptFields)({
+      return await runPhotoExtract({
+        media,
+        ctx,
+        deps,
+        log,
+      });
+    }
+    return await runVoiceExtract({
+      media,
+      ctx,
+      deps,
+      log,
+    });
+  } finally {
+    await purgeTemp(input.path, deps);
+  }
+}
+
+type OkCategoryContext = Extract<CategoryContext, { ok: true }>;
+
+async function runPhotoExtract(input: {
+  media: DownloadedMedia;
+  ctx: OkCategoryContext;
+  deps: ExtractDraftDeps;
+  log: ExtractAttemptLogger;
+}): Promise<ExtractionResult> {
+  const { media, ctx, deps, log } = input;
+
+  let raw: ExtractModelOutput;
+  try {
+    log.breadcrumb("vision");
+    raw = await timed(log, "vision", () =>
+      (deps.extractReceipt ?? extractReceiptFields)({
         bytes: media.bytes,
         mimeType: media.mimeType,
         visibleCategories: ctx.visibleCategories,
-      });
+      }),
+    );
+  } catch (err) {
+    log.fail({ step: "vision", reason: "vision_failed", err });
+    return { status: "error", reason: "extraction_failure" };
+  }
 
-      const normalized = normalizeExtract({
-        raw,
-        channel: "photo",
-        forceExpense: true,
-        visibleCategories: ctx.visibleCategories,
-        systemFallbackCategoryId: ctx.systemFallbackCategoryId,
-      });
-
-      const draft = draftFromNormalized(normalized, "photo");
-
-      return {
-        status: "ok",
-        draft,
-        categories: ctx.visibleCategories satisfies CategoryPickerItem[],
-      };
-    }
-
-    const { text } = await (deps.transcribe ?? transcribeRecording)({
-      bytes: media.bytes,
-      mimeType: media.mimeType,
-    });
-    if (!isUsableTranscript(text)) {
-      return { status: "error", reason: "extraction_failure" };
-    }
-
-    const raw = await (deps.extractTranscript ?? extractFromVoiceTranscript)({
-      transcript: text,
+  try {
+    log.breadcrumb("normalize");
+    const t0 = performance.now();
+    const normalized = normalizeExtract({
+      raw,
+      channel: "photo",
+      forceExpense: true,
       visibleCategories: ctx.visibleCategories,
+      systemFallbackCategoryId: ctx.systemFallbackCategoryId,
+    });
+    log.setTiming("normalize", performance.now() - t0);
+
+    const draft = draftFromNormalized(normalized, "photo");
+
+    log.success({
+      field_presence: fieldPresenceFromDraft(draft),
+      models: { vision: getVisionModel() },
     });
 
+    return {
+      status: "ok",
+      draft,
+      categories: ctx.visibleCategories satisfies CategoryPickerItem[],
+    };
+  } catch (err) {
+    log.fail({ step: "normalize", reason: "unexpected", err });
+    return { status: "error", reason: "extraction_failure" };
+  }
+}
+
+async function runVoiceExtract(input: {
+  media: DownloadedMedia;
+  ctx: OkCategoryContext;
+  deps: ExtractDraftDeps;
+  log: ExtractAttemptLogger;
+}): Promise<ExtractionResult> {
+  const { media, ctx, deps, log } = input;
+
+  let text: string;
+  try {
+    log.breadcrumb("stt");
+    const stt = await timed(log, "stt", () =>
+      (deps.transcribe ?? transcribeRecording)({
+        bytes: media.bytes,
+        mimeType: media.mimeType,
+      }),
+    );
+    text = stt.text;
+  } catch (err) {
+    log.fail({ step: "stt", reason: "stt_failed", err });
+    return { status: "error", reason: "extraction_failure" };
+  }
+
+  if (!isUsableTranscript(text)) {
+    log.fail({
+      step: "empty_transcript",
+      reason: "empty_transcript",
+      err: new Error("STT returned empty or whitespace-only transcript"),
+    });
+    return { status: "error", reason: "extraction_failure" };
+  }
+
+  let raw: ExtractModelOutput;
+  try {
+    log.breadcrumb("text_extract");
+    raw = await timed(log, "text_extract", () =>
+      (deps.extractTranscript ?? extractFromVoiceTranscript)({
+        transcript: text,
+        visibleCategories: ctx.visibleCategories,
+      }),
+    );
+  } catch (err) {
+    log.fail({
+      step: "text_extract",
+      reason: "text_extract_failed",
+      err,
+    });
+    return { status: "error", reason: "extraction_failure" };
+  }
+
+  try {
+    log.breadcrumb("normalize");
+    const t0 = performance.now();
     const normalized = normalizeExtract({
       raw,
       channel: "voice",
@@ -200,22 +324,32 @@ export async function extractDraft(
       visibleCategories: ctx.visibleCategories,
       systemFallbackCategoryId: ctx.systemFallbackCategoryId,
     });
+    log.setTiming("normalize", performance.now() - t0);
 
     const draft = draftFromNormalized(normalized, "voice");
+
+    log.success({
+      field_presence: fieldPresenceFromDraft(draft),
+      models: {
+        stt: getSttModel(),
+        text_extract: getTextExtractModel(),
+      },
+    });
 
     return {
       status: "ok",
       draft,
       categories: ctx.visibleCategories satisfies CategoryPickerItem[],
     };
-  } catch {
+  } catch (err) {
+    log.fail({ step: "normalize", reason: "unexpected", err });
     return { status: "error", reason: "extraction_failure" };
-  } finally {
-    await purgeTemp(input.path, deps);
   }
 }
 
-type ChannelMediaCheck = { ok: true } | { ok: false };
+type ChannelMediaCheck =
+  | { ok: true }
+  | { ok: false; detail: string };
 
 /** Channel-specific max bytes + MIME validation (ADR-0005 limits). */
 function checkChannelMedia(
@@ -224,7 +358,7 @@ function checkChannelMedia(
 ): ChannelMediaCheck {
   if (channel === "photo") {
     if (media.bytes.byteLength <= 0 || media.bytes.byteLength > PHOTO_MAX_BYTES) {
-      return { ok: false };
+      return { ok: false, detail: "photo exceeds max bytes or empty" };
     }
     // Photo MIME is not rejected server-side here (client compress enforces
     // allowed types pre-upload); preserve existing photo behavior.
@@ -232,10 +366,10 @@ function checkChannelMedia(
   }
 
   if (media.bytes.byteLength <= 0 || media.bytes.byteLength > VOICE_MAX_BYTES) {
-    return { ok: false };
+    return { ok: false, detail: "voice exceeds max bytes or empty" };
   }
   if (!canonicalVoiceMime(media.mimeType)) {
-    return { ok: false };
+    return { ok: false, detail: `unsupported mime: ${media.mimeType}` };
   }
   return { ok: true };
 }
