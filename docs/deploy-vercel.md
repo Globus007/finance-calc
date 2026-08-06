@@ -33,6 +33,8 @@ Production app for personal use. Backend is the same Supabase cloud project used
 | `NEXT_PUBLIC_SITE_URL` | `https://finance-calc-inky.vercel.app` | **omit** (use request Host) | local only |
 | `AI_GATEWAY_API_KEY` | omit (OIDC) | omit | local if needed |
 | `VISION_MODEL` | optional | optional | optional |
+| `NEXT_PUBLIC_HONEYBADGER_API_KEY` | yes | yes | yes (local testing) |
+| `NEXT_PUBLIC_HONEYBADGER_REVISION` | optional (else `VERCEL_GIT_COMMIT_SHA`) | optional | optional |
 
 CLI examples (values via stdin / `--value`, never commit secrets):
 
