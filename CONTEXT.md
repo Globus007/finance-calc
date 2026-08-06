@@ -13,15 +13,15 @@ A money inflow the user records for personal tracking. First-class concept, sepa
 _Avoid_: Transaction, entry, earning, credit, deposit, Income category, Source (as a required or typed field), Transfer, Refund (as domain types)
 
 **Draft**:
-A not-yet-committed capture result held for in-flight user confirmation only (Commit or Discard—no deferred/incomplete Draft list). It targets either exactly one future Expense or exactly one future Income, never mixed. Expense Drafts may come from photo, voice, or manual; Income Drafts only from voice or manual; photo always yields an Expense Draft. Confirm UI is the same field set across Channels; Channels differ only in prefill. An Expense Draft holds Amount, Occurred on, Category, and optional Note for that single prospective Expense (may be incomplete until Commit). An Income Draft holds Amount, Occurred on, and optional Note for that single prospective Income. Channel is set by the system from the capture path and is not a confirm form field.
-_Avoid_: Pending expense, unsaved transaction, form state (as the domain name), temporary expense, Line, multi-item draft
+A not-yet-committed capture result held for in-flight user confirmation only (Commit or Discard—no deferred/incomplete Draft list; at most one open Draft per user on a given surface). It targets either exactly one future Expense or exactly one future Income, never mixed. Expense Drafts may come from photo, voice, or manual; Income Drafts only from voice or manual; photo always yields an Expense Draft. Confirm UI is the same field set across Channels; Channels differ only in prefill. An Expense Draft holds Amount, Occurred on, Category, and optional Note for that single prospective Expense (may be incomplete until Commit). An Income Draft holds Amount, Occurred on, and optional Note for that single prospective Income. Channel is set by the system from the capture path and is not a confirm form field.
+_Avoid_: Pending expense, unsaved transaction, form state (as the domain name), temporary expense, Line, multi-item draft, draft queue
 
 **Commit**:
 The user action that creates exactly one Expense or exactly one Income from a confirmed Draft and ends that Draft. There is no partial Commit and no residual Draft. Only committed Expenses and Incomes appear in History and Monthly totals. Expense Commit requires Amount, Occurred on, and Category. Income Commit requires Amount and Occurred on. Closing confirm without Commit is Discard (explicit or equivalent). If the Commit attempt fails to persist, the Draft stays in-flight on confirm so the user may try Commit again or Discard—this is not Extraction failure and not a return to capture media.
 _Avoid_: Save (as the domain verb for this step), publish, finalize, post, sync
 
 **Discard**:
-The user action that abandons a whole Draft without creating an Expense or Income. Distinct from Delete of a committed record. Distinct from cancelling an in-flight extract before any Draft exists.
+Abandoning a whole Draft without creating an Expense or Income—usually the user action, and also any product-defined equivalent that ends the Draft the same way (e.g. idle expiry or starting a new capture that replaces the open Draft). Distinct from Delete of a committed record. Distinct from cancelling an in-flight extract before any Draft exists (no Draft → nothing to Discard).
 _Avoid_: Cancel (for this action), abort, reject
 
 **Category**:
