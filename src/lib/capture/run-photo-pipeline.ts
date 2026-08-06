@@ -130,11 +130,12 @@ export async function runPhotoPipeline(
     return { status: "extraction_failure" };
   }
 
-  // Extract path already deletes Storage object; clear local tracking.
-  uploadedPath = null;
+  // Extract's server path deletes on success and extraction_failure, but NOT
+  // on unauthenticated / invalid_path (returns before its purge). Don't clear
+  // uploadedPath here so finishCancelled / the non-ok branch can still purge.
 
   if (options.signal?.aborted) {
-    return { status: "cancelled" };
+    return finishCancelled();
   }
 
   if (extractResult.status === "ok") {
@@ -145,6 +146,10 @@ export async function runPhotoPipeline(
     };
   }
 
+  // Non-ok extract may have left the temp object in Storage (ADR-0005):
+  // unauthenticated/invalid_path return before server-side deletion, so purge
+  // explicitly here.
+  await deleteTemp({ path: uploadSlot.path }).catch(() => undefined);
   return { status: "extraction_failure" };
 }
 

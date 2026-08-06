@@ -146,4 +146,28 @@ describe("runPhotoPipeline", () => {
     expect(result).toEqual({ status: "extraction_failure" });
     expect(deleteTemp).toHaveBeenCalledWith({ path: "user/id.jpg" });
   });
+
+  it("client-purges temp when extract returns unauthenticated (no server purge)", async () => {
+    const deleteTemp = vi.fn(async () => ({ status: "ok" as const }));
+    const result = await runPhotoPipeline(makeFile(), {
+      deps: {
+        isOnline: () => true,
+        compress: async () => ({
+          ok: true,
+          blob: new Blob([new Uint8Array([1])], { type: "image/jpeg" }),
+          mime: "image/jpeg",
+        }),
+        createUpload: async () => ({
+          status: "ok",
+          path: "user/id.jpg",
+          token: "tok",
+        }),
+        uploadBlob: async () => ({ error: null }),
+        extract: async () => ({ status: "error", reason: "unauthenticated" }),
+        deleteTemp,
+      },
+    });
+    expect(result).toEqual({ status: "extraction_failure" });
+    expect(deleteTemp).toHaveBeenCalledWith({ path: "user/id.jpg" });
+  });
 });
