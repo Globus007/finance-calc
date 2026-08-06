@@ -220,15 +220,26 @@ export async function extractVoiceDraft(input: {
     return { status: "error", reason: "extraction_failure" };
   }
 
+  let raw: Awaited<ReturnType<typeof extractFromVoiceTranscript>>;
   try {
     log.breadcrumb("text_extract");
-    const raw = await timed(log, "text_extract", () =>
+    raw = await timed(log, "text_extract", () =>
       extractFromVoiceTranscript({
         transcript: text,
         visibleCategories,
       }),
     );
+  } catch (err) {
+    log.fail({
+      step: "text_extract",
+      reason: "text_extract_failed",
+      err,
+    });
+    await bestEffortDelete(input.path);
+    return { status: "error", reason: "extraction_failure" };
+  }
 
+  try {
     log.breadcrumb("normalize");
     const t0 = performance.now();
     const normalized = normalizeExtract({
@@ -256,11 +267,7 @@ export async function extractVoiceDraft(input: {
       categories: visibleCategories satisfies CategoryPickerItem[],
     };
   } catch (err) {
-    log.fail({
-      step: "text_extract",
-      reason: "text_extract_failed",
-      err,
-    });
+    log.fail({ step: "normalize", reason: "unexpected", err });
     return { status: "error", reason: "extraction_failure" };
   } finally {
     await bestEffortDelete(input.path);
