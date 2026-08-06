@@ -1,6 +1,6 @@
-import { deleteCaptureTempObject } from "@/app/(app)/capture/photo-actions";
 import {
   createVoiceUpload,
+  deleteCaptureTempObject,
   extractVoiceDraft,
   type ExtractVoiceDraftResult,
 } from "@/app/(app)/capture/voice-actions";
