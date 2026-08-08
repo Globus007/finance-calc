@@ -64,6 +64,25 @@ export function monthLabelRu(yearMonth: string): string {
   return `${MONTH_NAMES_RU[monthIndex]} ${yStr}`;
 }
 
+const YEAR_MONTH_RE = /^(\d{4})-(\d{2})$/;
+
+/**
+ * Resolve a calendar year-month for Month surface navigation.
+ * Accepts strict YYYY-MM; missing/invalid values fall back to current
+ * Europe/Minsk month (product default when opening Month).
+ */
+export function resolveYearMonth(
+  raw: string | null | undefined,
+  at: Date = new Date(),
+): string {
+  if (raw == null || raw === "") return currentYearMonth(at);
+  const match = YEAR_MONTH_RE.exec(raw);
+  if (!match) return currentYearMonth(at);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return currentYearMonth(at);
+  return raw;
+}
+
 function todayParts(at: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: MINSK,
