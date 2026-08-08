@@ -7,7 +7,7 @@ import {
   type CategoryDbRow,
 } from "./map-row";
 import { sortCategoriesForManage } from "./sort-categories";
-import type { CategoryManageItem } from "./types";
+import type { CategoryManageItem, CategoryPickerItem } from "./types";
 
 /**
  * Loads the signed-in user's Categories with usage flags and action caps
@@ -61,5 +61,32 @@ export const loadCategoriesForManage = cache(
         canDelete: caps.canDelete,
       };
     });
+  },
+);
+
+/**
+ * All Categories (visible + hidden) for History filters.
+ * Hidden still appear on committed Expenses; filter must offer them.
+ */
+export const loadCategoriesForHistoryFilter = cache(
+  async (): Promise<CategoryPickerItem[]> => {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from("categories")
+      .select(CATEGORY_SELECT);
+    if (error || !data) {
+      throw new Error(
+        `Failed to load categories for history filter: ${error?.message ?? "no data"}`,
+      );
+    }
+
+    return sortCategoriesForManage(
+      (data as CategoryDbRow[]).map(mapCategoryRow),
+    ).map((c) => ({ id: c.id, displayName: c.displayName }));
   },
 );

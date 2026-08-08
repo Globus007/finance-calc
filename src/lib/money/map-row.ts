@@ -8,6 +8,7 @@ export type ExpenseDbRow = {
   note: string | null;
   channel: string;
   created_at: string;
+  category_id: string;
   categories:
     | { display_name: string }
     | { display_name: string }[]
@@ -25,7 +26,7 @@ export type IncomeDbRow = {
 };
 
 export const EXPENSE_HISTORY_SELECT =
-  "id, amount, occurred_on, note, channel, created_at, categories(display_name)" as const;
+  "id, amount, occurred_on, note, channel, created_at, category_id, categories(display_name)" as const;
 
 export const INCOME_HISTORY_SELECT =
   "id, amount, occurred_on, note, channel, created_at" as const;
@@ -37,6 +38,7 @@ export function mapExpenseRow(row: ExpenseDbRow): HistoryItem {
     amount: parseNumeric(row.amount),
     occurredOn: row.occurred_on,
     createdAt: row.created_at,
+    categoryId: row.category_id,
     categoryDisplayName: categoryName(row.categories),
     note: row.note,
     channel: parseChannel(row.channel, "manual"),
@@ -50,6 +52,7 @@ export function mapIncomeRow(row: IncomeDbRow): HistoryItem {
     amount: parseNumeric(row.amount),
     occurredOn: row.occurred_on,
     createdAt: row.created_at,
+    categoryId: null,
     categoryDisplayName: null,
     note: row.note,
     channel: parseChannel(row.channel, "manual"),

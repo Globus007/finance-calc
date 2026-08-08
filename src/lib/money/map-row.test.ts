@@ -11,6 +11,7 @@ describe("mapExpenseRow", () => {
         note: "Евроопт",
         channel: "photo",
         created_at: "2026-08-04T10:00:00.000Z",
+        category_id: "cat-food",
         categories: { display_name: "Продукты" },
       }),
     ).toEqual({
@@ -19,6 +20,7 @@ describe("mapExpenseRow", () => {
       amount: 48.2,
       occurredOn: "2026-08-04",
       createdAt: "2026-08-04T10:00:00.000Z",
+      categoryId: "cat-food",
       categoryDisplayName: "Продукты",
       note: "Евроопт",
       channel: "photo",
@@ -43,6 +45,7 @@ describe("mapIncomeRow", () => {
       amount: 2100,
       occurredOn: "2026-08-01",
       createdAt: "2026-08-01T10:00:00.000Z",
+      categoryId: null,
       categoryDisplayName: null,
       note: "Зарплата",
       channel: "manual",
