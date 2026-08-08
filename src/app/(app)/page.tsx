@@ -1,16 +1,21 @@
 import Link from "next/link";
+import { CategoryBreakdown } from "@/components/category-breakdown";
 import { HistoryList } from "@/components/history-list";
 import { IconTags } from "@/components/icons";
 import { MonthlyTotalCard } from "@/components/monthly-total-card";
 import { monthLabelRu } from "@/lib/dates/minsk-month";
+import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
 import { loadHomeMoney } from "@/lib/money/load-money";
 
+const HOME_TOP_CATEGORIES = 5;
+
 /**
- * Home: current-month live Monthly total + recent committed History.
+ * Home: current-month live Monthly total, top expense Categories, recent History.
  */
 export default async function HomePage() {
-  const { yearMonth, totals, recent } = await loadHomeMoney();
+  const { yearMonth, totals, recent, monthItems } = await loadHomeMoney();
   const monthCaption = `Нетто · ${monthLabelRu(yearMonth).toLowerCase()}`;
+  const topCategories = computeCategoryBreakdown(monthItems);
 
   return (
     <div className="px-4 pb-6 pt-3">
@@ -39,6 +44,28 @@ export default async function HomePage() {
       <div className="mt-5">
         <MonthlyTotalCard totals={totals} caption={monthCaption} />
       </div>
+
+      {topCategories.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold tracking-tight">
+              Топ категорий
+            </h2>
+            <Link
+              href="/month"
+              className="text-xs font-semibold text-[#5B6CFF] transition active:opacity-70"
+            >
+              Месяц
+            </Link>
+          </div>
+          <CategoryBreakdown
+            rows={topCategories}
+            title="Топ категорий"
+            limit={HOME_TOP_CATEGORIES}
+            hideTitle
+          />
+        </div>
+      )}
 
       <div className="mt-6 flex items-center justify-between">
         <h2 className="text-base font-bold tracking-tight">Последние</h2>
