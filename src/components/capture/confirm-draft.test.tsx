@@ -34,7 +34,9 @@ describe("ConfirmDraft", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/Сумма/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Дата$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Категория/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Категория" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Заметка/i)).toBeInTheDocument();
     expect(screen.queryByText(/manual/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/канал/i)).not.toBeInTheDocument();
@@ -64,6 +66,99 @@ describe("ConfirmDraft", () => {
     expect(screen.queryByLabelText(/Категория/i)).not.toBeInTheDocument();
   });
 
+  it("manual: Amount is the primary first focus", () => {
+    render(
+      <ConfirmDraft
+        initialDraft={createManualDraft(
+          "expense",
+          new Date("2026-08-05T09:00:00.000Z"),
+        )}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/Сумма/i)).toHaveFocus();
+  });
+
+  it("manual Income: Amount is the primary first focus", () => {
+    render(
+      <ConfirmDraft
+        initialDraft={createManualDraft(
+          "income",
+          new Date("2026-08-05T09:00:00.000Z"),
+        )}
+        categories={[]}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/Сумма/i)).toHaveFocus();
+  });
+
+  it("photo/voice: do not steal focus when Amount is already prefilled", () => {
+    render(
+      <ConfirmDraft
+        initialDraft={{
+          kind: "expense",
+          channel: "photo",
+          amount: "48.20",
+          occurredOn: "2026-08-05",
+          categoryId: "cat-other",
+          note: "",
+        }}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/Сумма/i)).not.toHaveFocus();
+  });
+
+  it("expense: Category is one-tap chips (visible names, System fallback included)", async () => {
+    const user = userEvent.setup();
+    const draft = createManualDraft(
+      "expense",
+      new Date("2026-08-05T09:00:00.000Z"),
+    );
+    render(
+      <ConfirmDraft
+        initialDraft={draft}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    // No native <select> friction — chips expose display names.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Категория" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Продукты" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Прочее" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/Сумма/i), "25.50");
+    const submit = screen.getByRole("button", { name: "Сохранить" });
+    expect(submit).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: "Продукты" }));
+    expect(screen.getByRole("button", { name: "Продукты" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(submit).toBeEnabled();
+  });
+
   it("disables Commit until Expense has Amount, date, and Category", async () => {
     const user = userEvent.setup();
     const draft = createManualDraft(
@@ -86,8 +181,41 @@ describe("ConfirmDraft", () => {
     await user.type(screen.getByLabelText(/Сумма/i), "25.50");
     expect(submit).toBeDisabled();
 
-    await user.selectOptions(screen.getByLabelText(/Категория/i), "cat-products");
+    await user.click(screen.getByRole("button", { name: "Продукты" }));
     expect(submit).toBeEnabled();
+  });
+
+  it("amount-first field order: Amount, then Category (expense), then Date, then Note", () => {
+    render(
+      <ConfirmDraft
+        initialDraft={createManualDraft(
+          "expense",
+          new Date("2026-08-05T09:00:00.000Z"),
+        )}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    const amount = screen.getByLabelText(/Сумма/i);
+    const categoryGroup = screen.getByRole("group", { name: "Категория" });
+    const date = screen.getByLabelText(/^Дата$/i);
+    const note = screen.getByLabelText(/Заметка/i);
+
+    // Amount precedes Category; Category precedes Date; Date precedes Note.
+    expect(
+      amount.compareDocumentPosition(categoryGroup) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      categoryGroup.compareDocumentPosition(date) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      date.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("calls onDiscard without Commit", async () => {
@@ -204,7 +332,9 @@ describe("ConfirmDraft", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByLabelText(/Категория/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Категория" }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Доход" }));
 
@@ -244,15 +374,18 @@ describe("ConfirmDraft", () => {
     expect(
       screen.getByRole("heading", { name: "Подтверждение расхода" }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/Категория/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Категория" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
 
-    await user.selectOptions(screen.getByLabelText(/Категория/i), "cat-other");
+    await user.click(screen.getByRole("button", { name: "Прочее" }));
     expect(screen.getByRole("button", { name: "Сохранить" })).toBeEnabled();
   });
 
-  it("manual and photo do not show kind switch", () => {
-    const { unmount } = render(
+  it("manual: shows kind switch so type pick is not a separate screen", async () => {
+    const user = userEvent.setup();
+    render(
       <ConfirmDraft
         initialDraft={createManualDraft(
           "expense",
@@ -264,9 +397,21 @@ describe("ConfirmDraft", () => {
         commitFn={vi.fn()}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Доход" })).not.toBeInTheDocument();
-    unmount();
 
+    expect(screen.getByRole("button", { name: "Расход" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: "Доход" }));
+    expect(
+      screen.getByRole("heading", { name: "Подтверждение дохода" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Категория" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("photo does not show kind switch", () => {
     render(
       <ConfirmDraft
         initialDraft={{
@@ -283,7 +428,9 @@ describe("ConfirmDraft", () => {
         commitFn={vi.fn()}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Доход" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Доход" }),
+    ).not.toBeInTheDocument();
   });
 });
 

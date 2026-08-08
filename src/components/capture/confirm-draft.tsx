@@ -37,7 +37,7 @@ function defaultCommitFor(draft: Draft) {
 }
 
 /**
- * Expense↔Income switch rules for voice (ADR-0002):
+ * Expense↔Income switch rules for voice / manual (ADR-0002):
  * Expense→Income drops Category; Income→Expense clears Category until user picks.
  * Amount / Occurred on / Note are kept.
  */
@@ -52,7 +52,11 @@ export function switchDraftKind(draft: Draft, kind: RecordKind): Draft {
 /**
  * Confirm form for one in-flight Draft (ADR-0003).
  * Channel is not shown or edited. Commit failure keeps Draft for retry.
- * Voice allows Expense↔Income switch on confirm (ADR-0002).
+ * Voice and manual allow Expense↔Income switch on confirm (ADR-0002;
+ * manual kind switch collapses the separate type-picker screen — issue #61).
+ *
+ * Amount-first layout (issue #61): Amount → Category chips (expense) → Date → Note.
+ * Manual channel auto-focuses Amount so typing starts immediately.
  */
 export function ConfirmDraft({
   initialDraft,
@@ -67,7 +71,10 @@ export function ConfirmDraft({
   const [isPending, startTransition] = useTransition();
 
   const ready = canCommit(draft);
-  const allowKindSwitch = draft.channel === "voice";
+  // Manual gets kind switch so type is chosen on confirm (fewer screens).
+  const allowKindSwitch =
+    draft.channel === "voice" || draft.channel === "manual";
+  const focusAmount = initialDraft.channel === "manual";
 
   function patch(partial: Partial<Draft>) {
     setError(null);
@@ -139,7 +146,7 @@ export function ConfirmDraft({
             <div
               className="mt-3 flex gap-2"
               role="group"
-              aria-label="Тип записи"
+              aria-label="Расход или доход"
             >
               {(
                 [
@@ -173,6 +180,7 @@ export function ConfirmDraft({
             </p>
           ) : null}
 
+          {/* Amount-first: primary field, large type, autofocus on manual. */}
           <label className="mt-5 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
             Сумма (BYN)
             <input
@@ -181,12 +189,46 @@ export function ConfirmDraft({
               onChange={(e) => patch({ amount: e.target.value })}
               inputMode="decimal"
               autoComplete="off"
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3.5 text-xl font-bold tabular-nums outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              autoFocus={focusAmount}
+              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-4 text-2xl font-bold tabular-nums outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
               aria-required
             />
           </label>
 
-          <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
+          {draft.kind === "expense" ? (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
+                Категория
+              </p>
+              <div
+                className="mt-2 flex flex-wrap gap-2"
+                role="group"
+                aria-label="Категория"
+                aria-required
+              >
+                {categories.map((c) => {
+                  const selected = draft.categoryId === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => patch({ categoryId: c.id })}
+                      aria-pressed={selected}
+                      className={`cursor-pointer rounded-full px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] ${
+                        selected
+                          ? "bg-[#5B6CFF] text-white shadow-md shadow-[#5B6CFF]/25"
+                          : "bg-white text-[#1A1B2E]/75 ring-1 ring-[#1A1B2E]/8"
+                      }`}
+                    >
+                      {c.displayName}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
+          <label className="mt-4 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
             Дата
             <input
               name="occurredOn"
@@ -197,26 +239,6 @@ export function ConfirmDraft({
               aria-required
             />
           </label>
-
-          {draft.kind === "expense" ? (
-            <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-              Категория
-              <select
-                name="categoryId"
-                value={draft.categoryId}
-                onChange={(e) => patch({ categoryId: e.target.value })}
-                className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
-                aria-required
-              >
-                <option value="">Выберите…</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
 
           <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
             Заметка
