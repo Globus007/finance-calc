@@ -17,6 +17,8 @@ export type HistoryItem = {
   occurredOn: string;
   /** Commit time (ISO); tie-break for sort only. */
   createdAt: string;
+  /** Expense Category stable id; null for Income. */
+  categoryId: string | null;
   /** Expense Category display name; null for Income. */
   categoryDisplayName: string | null;
   note: string | null;

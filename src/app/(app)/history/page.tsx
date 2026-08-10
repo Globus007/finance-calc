@@ -1,13 +1,18 @@
 import Link from "next/link";
-import { HistoryList } from "@/components/history-list";
+import { HistoryPanel } from "@/components/history-panel";
 import { IconArrowLeft } from "@/components/icons";
+import { loadCategoriesForHistoryFilter } from "@/lib/categories/load-categories";
 import { loadHistory } from "@/lib/money/load-money";
 
 /**
  * Full mixed History of committed Expenses and Incomes (no Drafts).
+ * Filters (kind / Category / Occurred on range) are query-only UI over the list.
  */
 export default async function HistoryPage() {
-  const items = await loadHistory();
+  const [items, categories] = await Promise.all([
+    loadHistory(),
+    loadCategoriesForHistoryFilter(),
+  ]);
 
   return (
     <div className="px-4 pb-4 pt-3">
@@ -21,7 +26,7 @@ export default async function HistoryPage() {
       <p className="mt-1 text-sm text-[#1A1B2E]/45">
         Расходы и доходы · по дате
       </p>
-      <HistoryList items={items} />
+      <HistoryPanel items={items} categories={categories} />
     </div>
   );
 }

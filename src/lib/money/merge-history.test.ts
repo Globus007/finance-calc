@@ -8,6 +8,7 @@ function item(
 ): HistoryItem {
   return {
     amount: 10,
+    categoryId: partial.kind === "expense" ? "cat-other" : null,
     categoryDisplayName: partial.kind === "expense" ? "Прочее" : null,
     note: null,
     channel: "manual",
