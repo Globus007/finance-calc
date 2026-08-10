@@ -33,6 +33,7 @@ const base: BotSession = {
   cardMessageId: 2,
   progressMessageId: null,
   extractJobId: null,
+  commitClaimId: null,
   categoryPage: 0,
   updatedAt: "2026-08-10T10:00:00.000Z",
 };
@@ -101,6 +102,7 @@ describe("claimOpenBotSessionForCommit", () => {
         card_message_id: 11,
         progress_message_id: null,
         extract_job_id: null,
+        commit_claim_id: "claim-gen-1",
         category_page: 2,
         updated_at: "2026-08-10T10:00:00.000Z",
       },
@@ -127,6 +129,7 @@ describe("claimOpenBotSessionForCommit", () => {
       cardMessageId: 11,
       progressMessageId: null,
       extractJobId: null,
+      commitClaimId: "claim-gen-1",
       categoryPage: 2,
       updatedAt: "2026-08-10T10:00:00.000Z",
     });
@@ -161,6 +164,7 @@ describe("restoreBotSessionAfterFailedCommit", () => {
         cardMessageId: 11,
         progressMessageId: null,
         categoryPage: 2,
+        commitClaimId: "claim-gen-1",
       }),
     ).resolves.toBe(true);
 
@@ -174,11 +178,12 @@ describe("restoreBotSessionAfterFailedCommit", () => {
         p_card_message_id: 11,
         p_progress_message_id: null,
         p_category_page: 2,
+        p_commit_claim_id: "claim-gen-1",
       },
     );
   });
 
-  it("returns false when a newer extract/Draft already owns the session", async () => {
+  it("returns false when a newer generation already owns the session", async () => {
     rpc.mockResolvedValue({ data: false, error: null });
 
     await expect(
@@ -188,6 +193,7 @@ describe("restoreBotSessionAfterFailedCommit", () => {
         draft: base.draft!,
         cardChatId: 9,
         cardMessageId: 11,
+        commitClaimId: "stale-claim",
       }),
     ).resolves.toBe(false);
   });
@@ -209,6 +215,7 @@ describe("claimBotSessionForExtract", () => {
           card_message_id: 4,
           progress_message_id: null,
           extract_job_id: null,
+          commit_claim_id: null,
           category_page: 0,
           updated_at: "2026-08-10T10:00:00.000Z",
         },
@@ -236,6 +243,7 @@ describe("claimBotSessionForExtract", () => {
       cardMessageId: 4,
       progressMessageId: null,
       extractJobId: null,
+      commitClaimId: null,
       categoryPage: 0,
       updatedAt: "2026-08-10T10:00:00.000Z",
     });

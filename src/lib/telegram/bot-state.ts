@@ -22,6 +22,11 @@ export type BotSession = {
   progressMessageId: number | null;
   /** Opaque token for the in-flight extract job; null when not extracting. */
   extractJobId: string | null;
+  /**
+   * Opaque generation set by Commit claim on the post-claim idle row.
+   * Required for {@link restoreBotSessionAfterFailedCommit}; null otherwise.
+   */
+  commitClaimId: string | null;
   categoryPage: number;
   updatedAt: string;
 };
@@ -37,6 +42,7 @@ type Row = {
   card_message_id: number | null;
   progress_message_id: number | null;
   extract_job_id: string | null;
+  commit_claim_id: string | null;
   category_page: number | null;
   updated_at: string;
 };
@@ -50,13 +56,14 @@ function mapRow(row: Row): BotSession {
     cardMessageId: row.card_message_id,
     progressMessageId: row.progress_message_id,
     extractJobId: row.extract_job_id ?? null,
+    commitClaimId: row.commit_claim_id ?? null,
     categoryPage: row.category_page ?? 0,
     updatedAt: row.updated_at,
   };
 }
 
 const SESSION_COLUMNS =
-  "telegram_id, phase, draft, card_chat_id, card_message_id, progress_message_id, extract_job_id, category_page, updated_at";
+  "telegram_id, phase, draft, card_chat_id, card_message_id, progress_message_id, extract_job_id, commit_claim_id, category_page, updated_at";
 
 export async function loadBotSession(
   telegramId: string,
@@ -94,6 +101,9 @@ export async function upsertBotSession(input: {
       card_message_id: input.cardMessageId,
       progress_message_id: input.progressMessageId ?? null,
       extract_job_id: extractJobId,
+      // Client writes never hold a Commit-claim generation; only the claim RPC
+      // sets commit_claim_id. Clear so a later restore cannot match a stale id.
+      commit_claim_id: null,
       category_page: input.categoryPage ?? 0,
       updated_at: new Date().toISOString(),
     },
@@ -124,8 +134,9 @@ export async function clearBotSession(telegramId: string): Promise<void> {
  * an expense or rewrite the card to discarded/timeout copy.
  *
  * On Commit persist failure the caller must restore via
- * {@link restoreBotSessionAfterFailedCommit} (ADR-0008: stay on confirm for
- * retry). That restore is conditional so a newer extract/Draft that claimed
+ * {@link restoreBotSessionAfterFailedCommit} with the returned
+ * `commitClaimId` (ADR-0008: stay on confirm for retry). That restore is
+ * generation-scoped so a newer extract that claimed (and even later cleared)
  * the freed idle row is not overwritten. Discard winners must not restore.
  */
 export async function claimOpenBotSessionForCommit(input: {
@@ -155,9 +166,9 @@ export async function claimOpenBotSessionForCommit(input: {
 
 /**
  * Restore the open Draft after Commit persist failure only if the session is
- * still the empty idle row left by claim (no concurrent extract or new Draft).
- * Returns false when a newer owner superseded the claim — caller must not
- * clobber that session.
+ * still the empty idle row left by *this* claim generation (commitClaimId).
+ * A newer extract that claimed and later cleared back to idle is a different
+ * generation — restore returns false and must not clobber that session.
  */
 export async function restoreBotSessionAfterFailedCommit(input: {
   telegramId: string;
@@ -167,6 +178,8 @@ export async function restoreBotSessionAfterFailedCommit(input: {
   cardMessageId: number | null;
   progressMessageId?: number | null;
   categoryPage?: number;
+  /** Generation returned by {@link claimOpenBotSessionForCommit}. */
+  commitClaimId: string;
 }): Promise<boolean> {
   const admin = createAdminClient();
   const { data, error } = await admin.rpc(
@@ -179,6 +192,7 @@ export async function restoreBotSessionAfterFailedCommit(input: {
       p_card_message_id: input.cardMessageId,
       p_progress_message_id: input.progressMessageId ?? null,
       p_category_page: input.categoryPage ?? 0,
+      p_commit_claim_id: input.commitClaimId,
     },
   );
 

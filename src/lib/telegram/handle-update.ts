@@ -651,15 +651,18 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
       // Restore open Draft so the user can retry Commit (ADR-0008).
       // Conditional: if new media claimed the freed session during Commit,
       // do not overwrite its extractJobId / Draft (ADR-0010).
-      await restoreBotSessionAfterFailedCommit({
-        telegramId,
-        phase: claimed.phase,
-        draft,
-        cardChatId: claimed.cardChatId,
-        cardMessageId: claimed.cardMessageId,
-        progressMessageId: claimed.progressMessageId,
-        categoryPage: claimed.categoryPage,
-      });
+      if (claimed.commitClaimId) {
+        await restoreBotSessionAfterFailedCommit({
+          telegramId,
+          phase: claimed.phase,
+          draft,
+          cardChatId: claimed.cardChatId,
+          cardMessageId: claimed.cardMessageId,
+          progressMessageId: claimed.progressMessageId,
+          categoryPage: claimed.categoryPage,
+          commitClaimId: claimed.commitClaimId,
+        });
+      }
       await answerCallbackQuery({
         callbackQueryId: cq.id,
         text: commitAlert(result.reason),
