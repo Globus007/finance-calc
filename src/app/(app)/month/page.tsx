@@ -1,14 +1,18 @@
+import { CategoryBreakdown } from "@/components/category-breakdown";
 import { MonthlyTotalCard } from "@/components/monthly-total-card";
 import { monthLabelRu } from "@/lib/dates/minsk-month";
+import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
 import { loadMonthMoney } from "@/lib/money/load-money";
 
 /**
- * Month tab: live Monthly total for the current calendar month (Europe/Minsk).
+ * Month tab: live Monthly total + expense Category breakdown
+ * for the current calendar month (Europe/Minsk).
  * Empty month and incomplete current month use the same live sum.
  */
 export default async function MonthPage() {
   const { yearMonth, totals, items } = await loadMonthMoney();
   const label = monthLabelRu(yearMonth);
+  const breakdown = computeCategoryBreakdown(items);
 
   return (
     <div className="px-4 pb-4 pt-3">
@@ -23,6 +27,10 @@ export default async function MonthPage() {
           caption="Нетто"
           showBars
         />
+      </div>
+
+      <div className="mt-6">
+        <CategoryBreakdown rows={breakdown} />
       </div>
 
       <p className="mt-4 text-center text-[11px] text-[#1A1B2E]/40">
