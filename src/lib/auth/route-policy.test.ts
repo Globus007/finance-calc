@@ -10,10 +10,16 @@ describe("isAuthPublicPath", () => {
     expect(isAuthPublicPath("/auth/confirm")).toBe(true);
   });
 
+  it("allows telegram API paths without a session", () => {
+    expect(isAuthPublicPath("/api/telegram/auth")).toBe(true);
+    expect(isAuthPublicPath("/api/telegram/webhook")).toBe(true);
+  });
+
   it("treats protected app shell paths as not public", () => {
     expect(isAuthPublicPath("/")).toBe(false);
     expect(isAuthPublicPath("/month")).toBe(false);
     expect(isAuthPublicPath("/auth/other")).toBe(false);
+    expect(isAuthPublicPath("/api/other")).toBe(false);
   });
 });
 

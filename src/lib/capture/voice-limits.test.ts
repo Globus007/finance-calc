@@ -26,6 +26,16 @@ describe("checkVoiceFileMeta", () => {
     expect(
       checkVoiceFileMeta({ mimeType: "audio/m4a", sizeBytes: 500 }),
     ).toEqual({ ok: true, mime: "audio/x-m4a" });
+    // Shared product MIME for Telegram voice notes (ADR-0011) + PWA.
+    expect(
+      checkVoiceFileMeta({ mimeType: "audio/ogg", sizeBytes: 1000 }),
+    ).toEqual({ ok: true, mime: "audio/ogg" });
+    expect(
+      checkVoiceFileMeta({
+        mimeType: "audio/ogg;codecs=opus",
+        sizeBytes: 1000,
+      }),
+    ).toEqual({ ok: true, mime: "audio/ogg" });
   });
 
   it("rejects wrong type or oversize", () => {

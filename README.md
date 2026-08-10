@@ -4,11 +4,11 @@ Personal finance capture for a single user: record **expenses** and **income** i
 
 Capture channels:
 
-| Channel | Expense | Income |
-|---------|---------|--------|
-| Photo (receipt) | yes | — |
-| Voice | yes | yes |
-| Manual | yes | yes |
+| Channel | Expense | Income | Surfaces |
+|---------|---------|--------|----------|
+| Photo (receipt) | yes | — | PWA + Telegram bot |
+| Voice | yes | yes (PWA) | PWA + Telegram bot (Expense only) |
+| Manual | yes | yes | PWA only |
 
 Media (photo / recording) is ephemeral: after extraction, only draft fields remain for confirm. Commit creates exactly one expense or income; discard abandons the draft without saving.
 
@@ -100,6 +100,12 @@ prototype-screen-map/  # Throwaway UI prototype (not part of production app)
 Production deploys from `main` via Vercel. Details (env matrix, Auth URL config, PWA notes):
 
 → [`docs/deploy-vercel.md`](./docs/deploy-vercel.md)
+
+## Telegram bot (Expense capture)
+
+Optional **chat bot** for fast Expense capture (photo + voice → in-chat confirm → same Supabase expenses as the PWA). Disabled unless `TELEGRAM_BOT_TOKEN` is set; browser OTP unchanged. See PRD #69 and ADRs 0009–0011.
+
+→ [`docs/spike-telegram-feel-demo.md`](./docs/spike-telegram-feel-demo.md) (ops runbook)
 
 ## Agent / contributor docs
 
