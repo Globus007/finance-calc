@@ -1,13 +1,16 @@
+import { CategoryBreakdown } from "@/components/category-breakdown";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { MonthlyTotalCard } from "@/components/monthly-total-card";
 import {
   currentYearMonth,
   resolveYearMonth,
 } from "@/lib/dates/minsk-month";
+import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
 import { loadMonthMoney } from "@/lib/money/load-money";
 
 /**
- * Month tab: live Monthly total for a selected calendar month (Europe/Minsk).
+ * Month tab: live Monthly total + expense Category breakdown
+ * for a selected calendar month (Europe/Minsk).
  * Default is the current month; prev/next switcher browses past months up to current.
  * Empty month and incomplete current month use the same live sum.
  */
@@ -22,6 +25,7 @@ export default async function MonthPage({
   // Past + current only (MVP): clamp crafted future ?ym= to current month.
   const yearMonth = requested > current ? current : requested;
   const { totals, items } = await loadMonthMoney(yearMonth);
+  const breakdown = computeCategoryBreakdown(items);
 
   return (
     <div className="px-4 pb-4 pt-3">
@@ -32,6 +36,10 @@ export default async function MonthPage({
 
       <div className="mt-4">
         <MonthlyTotalCard totals={totals} caption="Нетто" showBars />
+      </div>
+
+      <div className="mt-6">
+        <CategoryBreakdown rows={breakdown} />
       </div>
 
       <p className="mt-4 text-center text-[11px] text-[#1A1B2E]/40">
