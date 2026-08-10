@@ -3,6 +3,7 @@ import {
   currentYearMonth,
   monthDateBounds,
   monthLabelRu,
+  resolveYearMonth,
   shiftYearMonth,
 } from "./minsk-month";
 
@@ -53,5 +54,28 @@ describe("shiftYearMonth", () => {
 describe("monthLabelRu", () => {
   it("formats a year-month for Russian UI", () => {
     expect(monthLabelRu("2026-08")).toBe("Август 2026");
+  });
+});
+
+describe("resolveYearMonth", () => {
+  const fixed = new Date("2026-08-05T09:00:00.000Z"); // August in Minsk
+
+  it("defaults to the current Europe/Minsk month when param is missing", () => {
+    expect(resolveYearMonth(undefined, fixed)).toBe("2026-08");
+    expect(resolveYearMonth(null, fixed)).toBe("2026-08");
+    expect(resolveYearMonth("", fixed)).toBe("2026-08");
+  });
+
+  it("accepts a valid YYYY-MM calendar month", () => {
+    expect(resolveYearMonth("2025-12", fixed)).toBe("2025-12");
+    expect(resolveYearMonth("2026-01", fixed)).toBe("2026-01");
+  });
+
+  it("falls back to current month for invalid values", () => {
+    expect(resolveYearMonth("not-a-month", fixed)).toBe("2026-08");
+    expect(resolveYearMonth("2026-13", fixed)).toBe("2026-08");
+    expect(resolveYearMonth("2026-00", fixed)).toBe("2026-08");
+    expect(resolveYearMonth("26-08", fixed)).toBe("2026-08");
+    expect(resolveYearMonth("2026-8", fixed)).toBe("2026-08");
   });
 });

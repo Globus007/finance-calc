@@ -1,32 +1,41 @@
 import { CategoryBreakdown } from "@/components/category-breakdown";
+import { MonthSwitcher } from "@/components/month-switcher";
 import { MonthlyTotalCard } from "@/components/monthly-total-card";
-import { monthLabelRu } from "@/lib/dates/minsk-month";
+import {
+  currentYearMonth,
+  resolveYearMonth,
+} from "@/lib/dates/minsk-month";
 import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
 import { loadMonthMoney } from "@/lib/money/load-money";
 
 /**
  * Month tab: live Monthly total + expense Category breakdown
- * for the current calendar month (Europe/Minsk).
+ * for a selected calendar month (Europe/Minsk).
+ * Default is the current month; prev/next switcher browses past months up to current.
  * Empty month and incomplete current month use the same live sum.
  */
-export default async function MonthPage() {
-  const { yearMonth, totals, items } = await loadMonthMoney();
-  const label = monthLabelRu(yearMonth);
+export default async function MonthPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ym?: string }>;
+}) {
+  const params = await searchParams;
+  const current = currentYearMonth();
+  const requested = resolveYearMonth(params.ym);
+  // Past + current only (MVP): clamp crafted future ?ym= to current month.
+  const yearMonth = requested > current ? current : requested;
+  const { totals, items } = await loadMonthMoney(yearMonth);
   const breakdown = computeCategoryBreakdown(items);
 
   return (
     <div className="px-4 pb-4 pt-3">
       <h1 className="text-2xl font-bold tracking-tight">Итог месяца</h1>
-      <p className="mt-1 text-sm text-[#1A1B2E]/45">
-        {label} · Europe/Minsk
-      </p>
+      <p className="mt-1 text-sm text-[#1A1B2E]/45">Europe/Minsk · живой итог</p>
+
+      <MonthSwitcher yearMonth={yearMonth} />
 
       <div className="mt-4">
-        <MonthlyTotalCard
-          totals={totals}
-          caption="Нетто"
-          showBars
-        />
+        <MonthlyTotalCard totals={totals} caption="Нетто" showBars />
       </div>
 
       <div className="mt-6">
