@@ -35,6 +35,10 @@ Production app for personal use. Backend is the same Supabase cloud project used
 | `VISION_MODEL` | optional | optional | optional |
 | `NEXT_PUBLIC_HONEYBADGER_API_KEY` | yes | yes | yes (local testing) |
 | `NEXT_PUBLIC_HONEYBADGER_REVISION` | optional (else `VERCEL_GIT_COMMIT_SHA`) | optional | optional |
+| `TELEGRAM_BOT_TOKEN` | optional (bot Expense capture) | optional | optional |
+| `TELEGRAM_WEBHOOK_SECRET` | optional (required if bot token set) | optional | optional |
+
+Telegram bot setup (setWebhook, mapping seed, smoke): [`docs/spike-telegram-feel-demo.md`](./spike-telegram-feel-demo.md).
 
 CLI examples (values via stdin / `--value`, never commit secrets):
 

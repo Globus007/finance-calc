@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { HoneybadgerProvider } from "@/components/honeybadger-provider";
+import { TelegramAppChrome } from "@/components/telegram/telegram-app-chrome";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -57,7 +59,15 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans">
-        <HoneybadgerProvider>{children}</HoneybadgerProvider>
+        {/* SPIKE: telegram-feel-demo — official WebApp JS (no-op outside TG). */}
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+        <HoneybadgerProvider>
+          <TelegramAppChrome />
+          {children}
+        </HoneybadgerProvider>
       </body>
     </html>
   );
