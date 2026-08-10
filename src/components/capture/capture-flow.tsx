@@ -19,15 +19,14 @@ import type {
 import { runPhotoPipeline } from "@/lib/capture/run-photo-pipeline";
 import { runVoicePipeline } from "@/lib/capture/run-voice-pipeline";
 import { createManualDraft } from "@/lib/draft/create-manual-draft";
-import type { Draft, RecordKind } from "@/lib/draft/types";
+import type { Draft } from "@/lib/draft/types";
 import { ConfirmDraft } from "./confirm-draft";
-import { ManualTypePicker } from "./manual-type-picker";
 import { PhotoShell, type PhotoShellMode } from "./photo-shell";
 import { VoiceShell, type VoiceShellMode } from "./voice-shell";
 
 type CapturePhase =
   | { name: "idle" }
-  | { name: "manual-type" }
+  | { name: "manual-loading" }
   | { name: "photo"; shell: PhotoShellMode; autoOpen: boolean }
   | { name: "voice"; shell: VoiceShellMode }
   | {
@@ -43,8 +42,6 @@ type CaptureContextValue = {
   isCaptureOpen: boolean;
   phase: CapturePhase;
   loadError: string | null;
-  isOpeningConfirm: boolean;
-  pickManualKind: (kind: RecordKind) => void;
   discard: () => void;
   onCommitted: () => void;
   onPhotoFile: (file: File) => void;
@@ -69,13 +66,16 @@ export function useCapture(): CaptureContextValue {
 }
 
 /**
- * Shell-level capture: photo / voice pipelines + manual type pick → confirm.
+ * Shell-level capture: photo / voice pipelines + amount-first manual → confirm.
+ *
+ * Manual (issue #61): skip the separate type-picker screen — open Expense Draft
+ * with categories loaded, Amount focused on confirm; kind switch covers Income.
  */
 export function CaptureProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [phase, setPhase] = useState<CapturePhase>({ name: "idle" });
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isOpeningConfirm, startOpenConfirm] = useTransition();
+  const [, startOpenConfirm] = useTransition();
   const abortRef = useRef<AbortController | null>(null);
 
   const discard = useCallback(() => {
@@ -89,40 +89,7 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     abortRef.current?.abort();
     abortRef.current = null;
     setLoadError(null);
-    setPhase({ name: "manual-type" });
-  }, []);
-
-  const openPhoto = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setLoadError(null);
-    setPhase({
-      name: "photo",
-      shell: { name: "pick" },
-      autoOpen: true,
-    });
-  }, []);
-
-  const openVoice = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setLoadError(null);
-    // Ready UI only — never auto-start mic (ADR-0008).
-    setPhase({ name: "voice", shell: { name: "ready" } });
-  }, []);
-
-  const pickManualKind = useCallback((kind: RecordKind) => {
-    setLoadError(null);
-
-    // async-defer-await: Income has no Category — skip picker I/O
-    if (kind === "income") {
-      setPhase({
-        name: "confirm",
-        draft: createManualDraft("income"),
-        categories: [],
-      });
-      return;
-    }
+    setPhase({ name: "manual-loading" });
 
     startOpenConfirm(async () => {
       const result = await loadPickerCategories();
@@ -145,6 +112,25 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
         categories: result.categories,
       });
     });
+  }, []);
+
+  const openPhoto = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoadError(null);
+    setPhase({
+      name: "photo",
+      shell: { name: "pick" },
+      autoOpen: true,
+    });
+  }, []);
+
+  const openVoice = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setLoadError(null);
+    // Ready UI only — never auto-start mic (ADR-0008).
+    setPhase({ name: "voice", shell: { name: "ready" } });
   }, []);
 
   const onCommitted = useCallback(() => {
@@ -307,8 +293,6 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       isCaptureOpen: phase.name !== "idle",
       phase,
       loadError,
-      isOpeningConfirm,
-      pickManualKind,
       discard,
       onCommitted,
       onPhotoFile,
@@ -327,8 +311,6 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
       openVoice,
       phase,
       loadError,
-      isOpeningConfirm,
-      pickManualKind,
       discard,
       onCommitted,
       onPhotoFile,
@@ -353,8 +335,6 @@ export function CaptureLayer() {
   const {
     phase,
     loadError,
-    isOpeningConfirm,
-    pickManualKind,
     discard,
     onCommitted,
     onPhotoFile,
@@ -372,20 +352,16 @@ export function CaptureLayer() {
 
   return (
     <div className="absolute inset-0 z-40 flex flex-col bg-[#F3F0FA]">
-      {phase.name === "manual-type" ? (
-        isOpeningConfirm ? (
-          <div
-            className="flex flex-1 flex-col items-center justify-center gap-2 px-4"
-            role="status"
-            aria-live="polite"
-          >
-            <p className="text-sm font-semibold text-[#1A1B2E]/60">
-              Загружаем категории…
-            </p>
-          </div>
-        ) : (
-          <ManualTypePicker onPick={pickManualKind} onDismiss={discard} />
-        )
+      {phase.name === "manual-loading" ? (
+        <div
+          className="flex flex-1 flex-col items-center justify-center gap-2 px-4"
+          role="status"
+          aria-live="polite"
+        >
+          <p className="text-sm font-semibold text-[#1A1B2E]/60">
+            Загружаем категории…
+          </p>
+        </div>
       ) : null}
 
       {phase.name === "photo" ? (
