@@ -8,6 +8,7 @@ import {
   isBotSessionIdleExpired,
   isOpenDraftPhase,
   ownsExtractJob,
+  restoreBotSessionAfterFailedCommit,
   type BotSession,
 } from "./bot-state";
 
@@ -131,7 +132,7 @@ describe("claimOpenBotSessionForCommit", () => {
     });
   });
 
-  it("returns null when another Commit already claimed the Draft", async () => {
+  it("returns null when another Commit or Discard already claimed the Draft", async () => {
     rpc.mockResolvedValue({ data: null, error: null });
 
     await expect(
@@ -140,6 +141,55 @@ describe("claimOpenBotSessionForCommit", () => {
         cardMessageId: 11,
       }),
     ).resolves.toBeNull();
+  });
+});
+
+describe("restoreBotSessionAfterFailedCommit", () => {
+  beforeEach(() => {
+    rpc.mockReset();
+  });
+
+  it("restores when the session is still idle after claim", async () => {
+    rpc.mockResolvedValue({ data: true, error: null });
+
+    await expect(
+      restoreBotSessionAfterFailedCommit({
+        telegramId: "42",
+        phase: "confirm",
+        draft: base.draft!,
+        cardChatId: 9,
+        cardMessageId: 11,
+        progressMessageId: null,
+        categoryPage: 2,
+      }),
+    ).resolves.toBe(true);
+
+    expect(rpc).toHaveBeenCalledWith(
+      "restore_telegram_bot_session_after_failed_commit",
+      {
+        p_telegram_id: "42",
+        p_phase: "confirm",
+        p_draft: base.draft,
+        p_card_chat_id: 9,
+        p_card_message_id: 11,
+        p_progress_message_id: null,
+        p_category_page: 2,
+      },
+    );
+  });
+
+  it("returns false when a newer extract/Draft already owns the session", async () => {
+    rpc.mockResolvedValue({ data: false, error: null });
+
+    await expect(
+      restoreBotSessionAfterFailedCommit({
+        telegramId: "42",
+        phase: "confirm",
+        draft: base.draft!,
+        cardChatId: 9,
+        cardMessageId: 11,
+      }),
+    ).resolves.toBe(false);
   });
 });
 

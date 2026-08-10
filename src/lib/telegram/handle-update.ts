@@ -23,6 +23,7 @@ import {
   isOpenDraftPhase,
   loadBotSession,
   ownsExtractJob,
+  restoreBotSessionAfterFailedCommit,
   setExtractProgressMessage,
   upsertBotSession,
   type BotSession,
@@ -473,13 +474,26 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
   }
 
   if (data === CB_DISCARD) {
+    // Exclusive claim so concurrent Commit cannot be overwritten by Discard UI.
+    const claimed = await claimOpenBotSessionForCommit({
+      telegramId,
+      cardMessageId: messageId,
+    });
+    if (!claimed?.draft) {
+      await answerCallbackQuery({
+        callbackQueryId: cq.id,
+        text: BOT_DRAFT_CLOSED,
+        showAlert: true,
+      });
+      return;
+    }
     await editMessageText({
       chatId,
       messageId,
       text: BOT_DISCARDED,
       replyMarkup: emptyKeyboard(),
     });
-    await clearBotSession(telegramId);
+    // Session already idle from claim; no second clear needed.
     await answerCallbackQuery({ callbackQueryId: cq.id, text: "Отброшено" });
     return;
   }
@@ -635,7 +649,9 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
 
     if (result.status !== "ok") {
       // Restore open Draft so the user can retry Commit (ADR-0008).
-      await upsertBotSession({
+      // Conditional: if new media claimed the freed session during Commit,
+      // do not overwrite its extractJobId / Draft (ADR-0010).
+      await restoreBotSessionAfterFailedCommit({
         telegramId,
         phase: claimed.phase,
         draft,
@@ -810,14 +826,29 @@ async function discardOpenDraft(
     await sendMessage({ chatId, text: BOT_NO_OPEN_DRAFT });
     return;
   }
-  if (session.cardChatId != null && session.cardMessageId != null) {
-    await editMessageText({
-      chatId: session.cardChatId,
-      messageId: session.cardMessageId,
-      text: BOT_DISCARDED,
-      replyMarkup: emptyKeyboard(),
+
+  // Claim before rewriting the card so a concurrent Commit is not masked.
+  if (session.cardMessageId != null) {
+    const claimed = await claimOpenBotSessionForCommit({
+      telegramId,
+      cardMessageId: session.cardMessageId,
     });
+    if (!claimed?.draft) {
+      await sendMessage({ chatId, text: BOT_NO_OPEN_DRAFT });
+      return;
+    }
+    if (claimed.cardChatId != null && claimed.cardMessageId != null) {
+      await editMessageText({
+        chatId: claimed.cardChatId,
+        messageId: claimed.cardMessageId,
+        text: BOT_DISCARDED,
+        replyMarkup: emptyKeyboard(),
+      });
+    }
+    await sendMessage({ chatId, text: BOT_DISCARDED });
+    return;
   }
+
   await clearBotSession(telegramId);
   await sendMessage({ chatId, text: BOT_DISCARDED });
 }
@@ -825,6 +856,28 @@ async function discardOpenDraft(
 async function maybeAutoDiscardExpired(telegramId: string): Promise<void> {
   const session = await loadBotSession(telegramId);
   if (!session || !isBotSessionIdleExpired(session)) return;
+
+  // Open Draft card: claim so concurrent Commit keeps its committed summary.
+  if (
+    isOpenDraftPhase(session.phase) &&
+    session.draft &&
+    session.cardMessageId != null
+  ) {
+    const claimed = await claimOpenBotSessionForCommit({
+      telegramId,
+      cardMessageId: session.cardMessageId,
+    });
+    if (!claimed) return;
+    if (claimed.cardChatId != null && claimed.cardMessageId != null) {
+      await editMessageText({
+        chatId: claimed.cardChatId,
+        messageId: claimed.cardMessageId,
+        text: BOT_TIMEOUT_DISCARD,
+        replyMarkup: emptyKeyboard(),
+      }).catch(() => undefined);
+    }
+    return;
+  }
 
   if (session.cardChatId != null && session.cardMessageId != null) {
     await editMessageText({

@@ -118,12 +118,15 @@ export async function clearBotSession(telegramId: string): Promise<void> {
 }
 
 /**
- * Atomically claim an open Draft for Commit: clears the session row and
- * returns the pre-clear snapshot. Concurrent Commit/Discard loses the race
- * (null) so only one expense insert can proceed.
+ * Atomically claim an open Draft for a terminal action (Commit or Discard):
+ * clears the session row and returns the pre-clear snapshot. Concurrent
+ * Commit/Discard/auto-Discard losers get null so only one winner may insert
+ * an expense or rewrite the card to discarded/timeout copy.
  *
- * On Commit persist failure the caller must restore via upsertBotSession
- * (ADR-0008: stay on confirm for retry).
+ * On Commit persist failure the caller must restore via
+ * {@link restoreBotSessionAfterFailedCommit} (ADR-0008: stay on confirm for
+ * retry). That restore is conditional so a newer extract/Draft that claimed
+ * the freed idle row is not overwritten. Discard winners must not restore.
  */
 export async function claimOpenBotSessionForCommit(input: {
   telegramId: string;
@@ -148,6 +151,43 @@ export async function claimOpenBotSessionForCommit(input: {
   const row = data as Row;
   if (!row.draft) return null;
   return mapRow(row);
+}
+
+/**
+ * Restore the open Draft after Commit persist failure only if the session is
+ * still the empty idle row left by claim (no concurrent extract or new Draft).
+ * Returns false when a newer owner superseded the claim — caller must not
+ * clobber that session.
+ */
+export async function restoreBotSessionAfterFailedCommit(input: {
+  telegramId: string;
+  phase: BotPhase;
+  draft: Draft;
+  cardChatId: number | null;
+  cardMessageId: number | null;
+  progressMessageId?: number | null;
+  categoryPage?: number;
+}): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc(
+    "restore_telegram_bot_session_after_failed_commit",
+    {
+      p_telegram_id: input.telegramId,
+      p_phase: input.phase,
+      p_draft: input.draft,
+      p_card_chat_id: input.cardChatId,
+      p_card_message_id: input.cardMessageId,
+      p_progress_message_id: input.progressMessageId ?? null,
+      p_category_page: input.categoryPage ?? 0,
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      `telegram_bot_sessions restore after failed commit: ${error.message}`,
+    );
+  }
+  return data === true;
 }
 
 /**
