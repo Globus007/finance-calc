@@ -5,6 +5,7 @@
 import { parseAmount } from "@/lib/draft/parse-amount";
 import { isNoteTooLong } from "@/lib/draft/normalize-note";
 import type { Draft } from "@/lib/draft/types";
+import { validateCommit } from "@/lib/draft/validate-commit";
 import {
   answerCallbackQuery,
   editMessageText,
@@ -13,10 +14,16 @@ import {
 } from "./bot-api";
 import { loadVisibleCategoriesForUser } from "./bot-categories";
 import {
+  claimBotSessionForExtract,
+  claimOpenBotSessionForCommit,
   clearBotSession,
+  clearBotSessionIfExtractJob,
+  completeBotSessionExtract,
   isBotSessionIdleExpired,
   isOpenDraftPhase,
   loadBotSession,
+  ownsExtractJob,
+  setExtractProgressMessage,
   upsertBotSession,
   type BotSession,
 } from "./bot-state";
@@ -175,6 +182,7 @@ async function handleMessage(update: TelegramUpdate): Promise<void> {
   );
 
   if (message.photo?.length || message.voice || hasUnsupportedMedia) {
+    // Soft check only — exclusive claim inside handleMediaCapture is authoritative.
     const current = await loadBotSession(telegramId);
     if (current?.phase === "extracting") {
       await sendMessage({ chatId, text: BOT_WAIT_OR_CANCEL });
@@ -188,19 +196,6 @@ async function handleMessage(update: TelegramUpdate): Promise<void> {
         text: preCaptureCopy(pre.reason),
       });
       return;
-    }
-
-    // Implicit Discard of open Draft card (ADR-0010).
-    if (current && isOpenDraftPhase(current.phase) && current.draft) {
-      if (current.cardChatId != null && current.cardMessageId != null) {
-        await editMessageText({
-          chatId: current.cardChatId,
-          messageId: current.cardMessageId,
-          text: "Заменён новым сообщением.",
-          replyMarkup: emptyKeyboard(),
-        }).catch(() => undefined);
-      }
-      await clearBotSession(telegramId);
     }
 
     await handleMediaCapture({
@@ -230,6 +225,34 @@ async function handleMediaCapture(input: {
 }): Promise<void> {
   const { telegramId, userId, chatId, preCapture, caption } = input;
   const isPhoto = preCapture.channel === "photo";
+  const extractJobId = crypto.randomUUID();
+
+  // Exclusive extract ownership (token + phase). Concurrent media loses here.
+  const claimed = await claimBotSessionForExtract({
+    telegramId,
+    extractJobId,
+  });
+  if (!claimed) {
+    await sendMessage({ chatId, text: BOT_WAIT_OR_CANCEL });
+    return;
+  }
+
+  // Implicit Discard of open Draft card (ADR-0010) after we own the session.
+  const previous = claimed.previous;
+  if (
+    previous &&
+    isOpenDraftPhase(previous.phase) &&
+    previous.draft &&
+    previous.cardChatId != null &&
+    previous.cardMessageId != null
+  ) {
+    await editMessageText({
+      chatId: previous.cardChatId,
+      messageId: previous.cardMessageId,
+      text: "Заменён новым сообщением.",
+      replyMarkup: emptyKeyboard(),
+    }).catch(() => undefined);
+  }
 
   const progress = await sendMessage({
     chatId,
@@ -238,15 +261,10 @@ async function handleMediaCapture(input: {
   });
 
   const progressMessageId = progress.ok ? progress.result.message_id : null;
-
-  await upsertBotSession({
+  await setExtractProgressMessage({
     telegramId,
-    phase: "extracting",
-    draft: null,
-    cardChatId: null,
-    cardMessageId: null,
+    extractJobId,
     progressMessageId,
-    categoryPage: 0,
   });
 
   const result = await runBotMediaPipeline({
@@ -256,14 +274,14 @@ async function handleMediaCapture(input: {
     deps: {
       isCancelled: async () => {
         const s = await loadBotSession(telegramId);
-        return !s || s.phase !== "extracting";
+        return !ownsExtractJob(s, extractJobId);
       },
     },
   });
 
-  // Re-check cancel after pipeline.
+  // Re-check ownership after pipeline (cancel or superseded job).
   const after = await loadBotSession(telegramId);
-  if (!after || after.phase !== "extracting") {
+  if (!ownsExtractJob(after, extractJobId)) {
     if (progress.ok) {
       await editMessageText({
         chatId,
@@ -276,7 +294,7 @@ async function handleMediaCapture(input: {
   }
 
   if (result.status === "cancelled") {
-    await clearBotSession(telegramId);
+    await clearBotSessionIfExtractJob({ telegramId, extractJobId });
     if (progress.ok) {
       await editMessageText({
         chatId,
@@ -289,7 +307,7 @@ async function handleMediaCapture(input: {
   }
 
   if (result.status === "pre_capture") {
-    await clearBotSession(telegramId);
+    await clearBotSessionIfExtractJob({ telegramId, extractJobId });
     const copy =
       result.reason === "categories_unavailable"
         ? BOT_CATEGORIES_MISSING
@@ -311,7 +329,7 @@ async function handleMediaCapture(input: {
   }
 
   if (result.status === "extraction_failure") {
-    await clearBotSession(telegramId);
+    await clearBotSessionIfExtractJob({ telegramId, extractJobId });
     const copy = isPhoto
       ? BOT_EXTRACTION_FAILURE_PHOTO
       : BOT_EXTRACTION_FAILURE_VOICE;
@@ -337,20 +355,37 @@ async function handleMediaCapture(input: {
   });
 
   if (!card.ok) {
-    await clearBotSession(telegramId);
+    await clearBotSessionIfExtractJob({ telegramId, extractJobId });
     await sendMessage({ chatId, text: "Не удалось показать черновик." });
     return;
   }
 
-  await upsertBotSession({
+  const completed = await completeBotSessionExtract({
     telegramId,
-    phase: "confirm",
+    extractJobId,
     draft,
     cardChatId: chatId,
     cardMessageId: card.result.message_id,
-    progressMessageId: null,
-    categoryPage: 0,
   });
+
+  if (!completed) {
+    // Lost ownership between pipeline and confirm (cancel / concurrent claim).
+    await editMessageText({
+      chatId,
+      messageId: card.result.message_id,
+      text: BOT_DRAFT_CLOSED,
+      replyMarkup: emptyKeyboard(),
+    }).catch(() => undefined);
+    if (progress.ok) {
+      await editMessageText({
+        chatId,
+        messageId: progress.result.message_id,
+        text: BOT_EXTRACT_CANCELLED,
+        replyMarkup: emptyKeyboard(),
+      }).catch(() => undefined);
+    }
+    return;
+  }
 
   if (progress.ok) {
     await editMessageText({
@@ -395,10 +430,13 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
 
   await maybeAutoDiscardExpired(telegramId);
 
-  // Cancel extract (progress message button).
+  // Cancel extract (progress message button) — only the active job's progress msg.
   if (data === CB_CANCEL_EXTRACT) {
     const session = await loadBotSession(telegramId);
-    if (session?.phase === "extracting") {
+    if (
+      session?.phase === "extracting" &&
+      session.progressMessageId === messageId
+    ) {
       await clearBotSession(telegramId);
       await editMessageText({
         chatId,
@@ -564,12 +602,48 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
   }
 
   if (data === CB_COMMIT) {
+    // Field validation without claiming — keep Draft open on invalid Commit.
+    const precheck = validateCommit(open.draft);
+    if (!precheck.ok) {
+      await answerCallbackQuery({
+        callbackQueryId: cq.id,
+        text: commitAlert(precheck.reason),
+        showAlert: true,
+      });
+      return;
+    }
+
+    // Exclusive claim before insert: concurrent Commit cannot both persist.
+    const claimed = await claimOpenBotSessionForCommit({
+      telegramId,
+      cardMessageId: messageId,
+    });
+    if (!claimed?.draft) {
+      await answerCallbackQuery({
+        callbackQueryId: cq.id,
+        text: BOT_DRAFT_CLOSED,
+        showAlert: true,
+      });
+      return;
+    }
+
+    const draft = claimed.draft;
     const result = await commitBotDraft({
       userId: link.userId,
-      draft: open.draft,
+      draft,
     });
 
     if (result.status !== "ok") {
+      // Restore open Draft so the user can retry Commit (ADR-0008).
+      await upsertBotSession({
+        telegramId,
+        phase: claimed.phase,
+        draft,
+        cardChatId: claimed.cardChatId,
+        cardMessageId: claimed.cardMessageId,
+        progressMessageId: claimed.progressMessageId,
+        categoryPage: claimed.categoryPage,
+      });
       await answerCallbackQuery({
         callbackQueryId: cq.id,
         text: commitAlert(result.reason),
@@ -580,10 +654,10 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
 
     const categoryName = await loadCategoryName(
       link.userId,
-      open.draft.categoryId,
+      draft.categoryId,
     );
     const doneText = formatDraftCardText({
-      draft: open.draft,
+      draft,
       categoryName,
       footer: BOT_COMMITTED,
     });
@@ -593,7 +667,7 @@ async function handleCallback(update: TelegramUpdate): Promise<void> {
       text: doneText,
       replyMarkup: emptyKeyboard(),
     });
-    await clearBotSession(telegramId);
+    // Session already idle from claim; no second clear needed.
     await answerCallbackQuery({ callbackQueryId: cq.id, text: "Записано" });
     return;
   }
