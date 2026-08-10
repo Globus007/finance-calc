@@ -67,6 +67,9 @@ export const loadCategoriesForManage = cache(
 /**
  * All Categories (visible + hidden) for History filters.
  * Hidden still appear on committed Expenses; filter must offer them.
+ *
+ * Soft-fails to [] on error so the History list still renders without the
+ * category filter options (auxiliary UI only).
  */
 export const loadCategoriesForHistoryFilter = cache(
   async (): Promise<CategoryPickerItem[]> => {
@@ -79,11 +82,8 @@ export const loadCategoriesForHistoryFilter = cache(
     const { data, error } = await supabase
       .from("categories")
       .select(CATEGORY_SELECT);
-    if (error || !data) {
-      throw new Error(
-        `Failed to load categories for history filter: ${error?.message ?? "no data"}`,
-      );
-    }
+    // Soft-fail: categories only power the filter dropdown; do not block History.
+    if (error || !data) return [];
 
     return sortCategoriesForManage(
       (data as CategoryDbRow[]).map(mapCategoryRow),
