@@ -72,3 +72,80 @@ select:focus-visible {
     box-shadow: 0 28px 80px -32px rgb(49 46 129 / 0.38);
   }
 }
+
+@keyframes nav-tab-arrive {
+  0% {
+    opacity: 0.45;
+    transform: translateY(3px) scale(0.82);
+  }
+
+  65% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.07);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes nav-tab-label-arrive {
+  from {
+    opacity: 0.55;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nav-tab-icon {
+  transform-origin: center;
+  will-change: transform;
+}
+
+.nav-tab-icon-active {
+  animation: nav-tab-arrive 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.nav-tab-label {
+  transition: color 240ms ease-out, opacity 240ms ease-out, transform 240ms ease-out;
+}
+
+.nav-tab-label-active {
+  animation: nav-tab-label-arrive 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.nav-tab-indicator {
+  display: block;
+  height: 3px;
+  width: 18px;
+  margin-top: -1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #818cf8, #4f46e5);
+  opacity: 0;
+  transform: scaleX(0.25);
+  transform-origin: center;
+  transition: opacity 240ms ease-out, transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-tab-indicator-active {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-tab-icon-active,
+  .nav-tab-label-active {
+    animation: none;
+  }
+
+  .nav-tab-icon,
+  .nav-tab-label,
+  .nav-tab-indicator {
+    transition-duration: 1ms;
+  }
+}
