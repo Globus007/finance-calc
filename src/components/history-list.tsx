@@ -23,14 +23,14 @@ export function HistoryList({
 }: Props) {
   if (items.length === 0) {
     return (
-      <p className="mt-4 rounded-2xl bg-white px-4 py-8 text-center text-sm text-[#1A1B2E]/45 shadow-[0_4px_16px_-8px_rgba(26,27,46,0.12)]">
+      <p className="mt-4 rounded-[1.35rem] border border-white/80 bg-white/75 px-5 py-9 text-center text-sm leading-relaxed text-[#697386] shadow-[0_12px_24px_-20px_rgba(23,32,51,0.30)] backdrop-blur-sm">
         {emptyMessage}
       </p>
     );
   }
 
   return (
-    <ul className="mt-3 space-y-2" aria-label="История">
+    <ul className="mt-3 space-y-2.5" aria-label="История">
       {items.map((item) => (
         <HistoryRow key={`${item.kind}-${item.id}`} item={item} />
       ))}
@@ -58,13 +58,13 @@ function HistoryRow({ item }: { item: HistoryItem }) {
       <Link
         href={href}
         aria-label={a11yLabel}
-        className="flex items-center gap-3 rounded-2xl bg-white px-3 py-3 shadow-[0_4px_16px_-8px_rgba(26,27,46,0.12)] transition active:scale-[0.99]"
+        className="group flex items-center gap-3 rounded-[1.35rem] border border-white/85 bg-white/85 px-3 py-3 shadow-[0_10px_22px_-20px_rgba(23,32,51,0.36)] backdrop-blur-sm transition hover:border-[#DDE0FF] hover:bg-white active:scale-[0.99]"
       >
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 ${
             isIncome
-              ? "bg-[#D1FAE5] text-[#059669]"
-              : "bg-[#FFEDD5] text-[#EA580C]"
+              ? "bg-[#DFF8EF] text-[#0F9F80] ring-[#0F9F80]/8"
+              : "bg-[#FFF0E9] text-[#E66B43] ring-[#E66B43]/8"
           }`}
           aria-hidden
         >
@@ -75,14 +75,14 @@ function HistoryRow({ item }: { item: HistoryItem }) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{title}</p>
-          <p className="truncate text-[11px] text-[#1A1B2E]/40">
+          <p className="truncate text-sm font-semibold tracking-[-0.01em] text-[#172033]">{title}</p>
+          <p className="mt-0.5 truncate text-[11px] text-[#697386]">
             {subtitleParts.join(" · ")}
           </p>
         </div>
         <p
-          className={`shrink-0 text-sm font-bold tabular-nums ${
-            isIncome ? "text-[#059669]" : "text-[#1A1B2E]"
+          className={`shrink-0 text-sm font-bold tracking-[-0.025em] tabular-nums ${
+            isIncome ? "text-[#0F9F80]" : "text-[#172033]"
           }`}
         >
           {isIncome ? "+" : "−"}

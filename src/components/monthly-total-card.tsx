@@ -23,81 +23,89 @@ export function MonthlyTotalCard({
   const max = Math.max(expenseTotal, incomeTotal, 1);
   const expH = Math.round((expenseTotal / max) * 100);
   const incH = Math.round((incomeTotal / max) * 100);
+  const statusLabel = empty ? "пусто" : net >= 0 ? "плюс" : "минус";
 
   return (
     <section
-      className="relative overflow-hidden rounded-[1.75rem] bg-white px-5 py-6 shadow-[0_10px_40px_-12px_rgba(91,108,255,0.18)]"
+      className="relative overflow-hidden rounded-[2rem] bg-[#172033] px-5 py-5 text-white shadow-[0_24px_46px_-24px_rgba(23,32,51,0.72)]"
       aria-label="Итог месяца"
     >
-      <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#E0E7FF]" />
-      <div className="pointer-events-none absolute -bottom-8 left-10 h-24 w-24 rounded-full bg-[#F3E8FF]" />
+      <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[#818CF8]/45 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 left-8 h-44 w-44 rounded-full bg-[#2DD4BF]/20 blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
 
       <div className="relative flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-[#1A1B2E]/45">{caption}</p>
-          <p className="mt-1 text-[2rem] font-bold tracking-tight tabular-nums">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#C7D2FE]">
+            {caption}
+          </p>
+          <p className="mt-2 text-[2.35rem] font-bold leading-none tracking-[-0.055em] tabular-nums sm:text-[2.6rem]">
             {net < 0 ? "−" : ""}
             {formatByn(Math.abs(net))}
           </p>
+          <p className="mt-2 text-xs text-white/58">Текущий финансовый баланс</p>
         </div>
-        {showBars && (
-          <span
-            className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
-              empty
-                ? "bg-[#E0E7FF] text-[#4338CA]"
-                : net >= 0
-                  ? "bg-[#D1FAE5] text-[#059669]"
-                  : "bg-[#FEE2E2] text-[#DC2626]"
-            }`}
-          >
-            {empty ? "пусто" : net >= 0 ? "плюс" : "минус"}
-          </span>
-        )}
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide ${
+            empty
+              ? "border-[#C7D2FE]/25 bg-[#C7D2FE]/12 text-[#E0E7FF]"
+              : net >= 0
+                ? "border-[#99F6E4]/20 bg-[#2DD4BF]/14 text-[#99F6E4]"
+                : "border-[#FED7AA]/20 bg-[#FB923C]/14 text-[#FED7AA]"
+          }`}
+        >
+          {statusLabel}
+        </span>
       </div>
 
       {showBars && (
-        <div className="relative mt-6 flex h-28 items-end justify-center gap-8">
-          <div className="flex flex-col items-center gap-2">
+        <div className="relative mt-6 flex h-24 items-end justify-center gap-10 border-b border-white/10 pb-4">
+          <div className="flex h-full flex-col items-center justify-end gap-2">
             <div
-              className="w-12 rounded-t-xl bg-[#5B6CFF] transition-all"
+              className="w-12 rounded-t-xl bg-gradient-to-t from-[#34D399] to-[#A7F3D0] shadow-[0_0_20px_rgba(52,211,153,0.30)] transition-all"
               style={{ height: `${Math.max(incH, empty ? 8 : 12)}%` }}
             />
-            <span className="text-[10px] font-medium text-[#1A1B2E]/45">
-              Доход
-            </span>
+            <span className="text-[10px] font-medium text-white/55">Доход</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex h-full flex-col items-center justify-end gap-2">
             <div
-              className="w-12 rounded-t-xl bg-[#FF8A4C] transition-all"
+              className="w-12 rounded-t-xl bg-gradient-to-t from-[#FB923C] to-[#FED7AA] shadow-[0_0_20px_rgba(251,146,60,0.22)] transition-all"
               style={{ height: `${Math.max(expH, empty ? 8 : 12)}%` }}
             />
-            <span className="text-[10px] font-medium text-[#1A1B2E]/45">
-              Расход
-            </span>
+            <span className="text-[10px] font-medium text-white/55">Расход</span>
           </div>
         </div>
       )}
 
-      <div
-        className={`relative flex gap-6 ${showBars ? "mt-6 border-t border-[#1A1B2E]/06 pt-4" : "mt-4"}`}
-      >
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-[#1A1B2E]/35">
-            Доходы
-          </p>
-          <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#10B981]">
-            +{formatByn(incomeTotal)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-[#1A1B2E]/35">
-            Расходы
-          </p>
-          <p className="mt-0.5 text-sm font-semibold tabular-nums text-[#F97316]">
-            −{formatByn(expenseTotal)}
-          </p>
-        </div>
+      <div className={`relative grid grid-cols-2 gap-2.5 ${showBars ? "mt-4" : "mt-6"}`}>
+        <MetricTile label="Доходы" value={`+${formatByn(incomeTotal)}`} tone="income" />
+        <MetricTile label="Расходы" value={`−${formatByn(expenseTotal)}`} tone="expense" />
       </div>
     </section>
+  );
+}
+
+function MetricTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: "income" | "expense";
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-3 py-2.5 backdrop-blur-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/48">
+        {label}
+      </p>
+      <p
+        className={`mt-1 text-sm font-bold tabular-nums ${
+          tone === "income" ? "text-[#99F6E4]" : "text-[#FED7AA]"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
   );
 }

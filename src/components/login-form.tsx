@@ -103,14 +103,17 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center bg-[#F3F0FA] px-5 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] text-[#1A1B2E]">
-      <div className="rounded-[1.75rem] bg-white p-6 shadow-[0_10px_40px_-12px_rgba(91,108,255,0.18)]">
+    <div className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center overflow-hidden bg-[#F5F7FC] px-5 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] text-[#172033] md:my-5 md:min-h-[calc(100dvh-2.5rem)] md:rounded-[2rem] md:border md:border-white/80 md:shadow-[0_28px_80px_-32px_rgba(49,46,129,0.38)]">
+      <div className="pointer-events-none absolute -right-16 top-0 h-64 w-64 rounded-full bg-[#C7D2FE]/70 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-[#CCFBF1]/50 blur-3xl" />
+
+      <div className="relative rounded-[2rem] border border-white/85 bg-white/86 p-6 shadow-[0_24px_54px_-30px_rgba(23,32,51,0.42)] backdrop-blur-xl">
         <LoginHeader />
 
         {step === "email" ? (
-          <form onSubmit={sendCode} className="mt-6 space-y-4">
+          <form onSubmit={sendCode} className="mt-7 space-y-4">
             <label className="block">
-              <span className="text-xs font-semibold text-[#1A1B2E]/55">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
                 Email
               </span>
               <input
@@ -121,7 +124,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
                 required
                 value={email}
                 onChange={(ev) => setEmail(ev.target.value)}
-                className="mt-1.5 w-full rounded-2xl border border-[#1A1B2E]/10 bg-[#F8F7FC] px-4 py-3 text-base outline-none ring-[#5B6CFF]/40 focus:ring-2"
+                className="mt-2 w-full rounded-2xl border border-[#E6EAF2] bg-[#F8FAFC] px-4 py-3.5 text-base text-[#172033] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#818CF8] focus:bg-white focus:ring-4 focus:ring-[#E9EAFE]"
                 placeholder="you@example.com"
                 disabled={isPending}
               />
@@ -129,21 +132,21 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full rounded-2xl bg-gradient-to-br from-[#5B6CFF] to-[#4338CA] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#5B6CFF]/30 transition active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? "Отправляем…" : "Получить код"}
             </button>
           </form>
         ) : (
-          <form onSubmit={submitCode} className="mt-6 space-y-4">
-            <p className="text-sm leading-relaxed text-[#1A1B2E]/70">
+          <form onSubmit={submitCode} className="mt-7 space-y-4">
+            <p className="rounded-2xl bg-[#EEF2FF] px-3.5 py-3 text-sm leading-relaxed text-[#4F46E5]">
               Код отправлен на{" "}
-              <span className="font-semibold text-[#1A1B2E]">{email}</span>.
+              <span className="font-bold text-[#312E81]">{email}</span>.
               Введите его <strong>здесь</strong> — так сессия останется в этом
-              приложении (в том числе на домашнем экране).
+              приложении, в том числе на домашнем экране.
             </p>
             <label className="block">
-              <span className="text-xs font-semibold text-[#1A1B2E]/55">
+              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
                 Код из письма
               </span>
               <input
@@ -159,7 +162,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
                 required
                 value={code}
                 onChange={(ev) => setCode(ev.target.value)}
-                className="mt-1.5 w-full rounded-2xl border border-[#1A1B2E]/10 bg-[#F8F7FC] px-4 py-3 text-center font-mono text-2xl tracking-[0.35em] outline-none ring-[#5B6CFF]/40 focus:ring-2"
+                className="mt-2 w-full rounded-2xl border border-[#E6EAF2] bg-[#F8FAFC] px-4 py-3.5 text-center font-mono text-2xl tracking-[0.35em] text-[#172033] outline-none transition placeholder:text-[#A5B4FC] focus:border-[#818CF8] focus:bg-white focus:ring-4 focus:ring-[#E9EAFE]"
                 placeholder="••••••"
                 disabled={isPending}
                 aria-label="6-значный код"
@@ -168,7 +171,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
             <button
               type="submit"
               disabled={isPending}
-              className="w-full rounded-2xl bg-gradient-to-br from-[#5B6CFF] to-[#4338CA] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#5B6CFF]/30 transition active:scale-[0.99] disabled:opacity-60"
+              className="w-full rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPending ? "Проверяем…" : "Войти"}
             </button>
@@ -181,7 +184,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
                 setError(null);
                 setInfo(null);
               }}
-              className="w-full text-sm font-semibold text-[#5B6CFF]"
+              className="w-full rounded-xl py-1 text-sm font-bold text-[#4F46E5] transition hover:bg-[#EEF2FF] disabled:opacity-60"
             >
               Изменить email / отправить снова
             </button>
@@ -189,12 +192,12 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         )}
 
         {info ? (
-          <p className="mt-4 text-sm text-[#059669]" role="status">
+          <p className="mt-4 rounded-2xl bg-[#DFF8EF] px-3.5 py-3 text-sm leading-relaxed text-[#087E66]" role="status">
             {info}
           </p>
         ) : null}
         {error ? (
-          <p className="mt-4 text-sm text-[#DC2626]" role="alert">
+          <p className="mt-4 rounded-2xl bg-[#FFF0E9] px-3.5 py-3 text-sm leading-relaxed text-[#C44822]" role="alert">
             {error}
           </p>
         ) : null}
@@ -207,11 +210,14 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
 function LoginHeader() {
   return (
     <>
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5B6CFF]">
-        Finance
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6366F1] to-[#3730A3] text-sm font-bold text-white shadow-[0_12px_22px_-12px_rgba(79,70,229,0.65)]">
+        Br
+      </div>
+      <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-[#4F46E5]">
+        Личные финансы
       </p>
-      <h1 className="mt-2 text-2xl font-bold tracking-tight">Вход</h1>
-      <p className="mt-2 text-sm leading-relaxed text-[#1A1B2E]/55">
+      <h1 className="mt-2 text-3xl font-bold tracking-[-0.05em] text-[#172033]">Вход</h1>
+      <p className="mt-2.5 text-sm leading-relaxed text-[#697386]">
         Вход по коду из письма. Код вводится в приложении — удобно для PWA на
         домашнем экране.
       </p>

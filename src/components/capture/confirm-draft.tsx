@@ -114,15 +114,15 @@ export function ConfirmDraft({
 
   return (
     <div
-      className="flex h-full flex-col bg-[#F3F0FA]"
+      className="flex h-full flex-col bg-[#F5F7FC] text-[#172033]"
       role="dialog"
       aria-labelledby="confirm-draft-title"
     >
-      <header className="flex items-center justify-between px-4 pt-3">
+      <header className="flex items-center justify-between px-4 pt-4">
         <button
           type="button"
           onClick={onDiscard}
-          className="cursor-pointer text-xs font-semibold text-[#1A1B2E]/45"
+          className="rounded-xl px-2.5 py-2 text-xs font-bold text-[#697386] transition hover:bg-white active:scale-95"
         >
           Отбросить
         </button>
@@ -134,17 +134,20 @@ export function ConfirmDraft({
         className="flex min-h-0 flex-1 flex-col"
         noValidate
       >
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4F46E5]">
+            Новая операция
+          </p>
           <h1
             id="confirm-draft-title"
-            className="text-2xl font-bold tracking-tight"
+            className="mt-1 text-[1.7rem] font-bold tracking-[-0.045em]"
           >
             {title}
           </h1>
 
           {allowKindSwitch ? (
             <div
-              className="mt-3 flex gap-2"
+              className="mt-4 grid grid-cols-2 gap-1 rounded-2xl border border-[#E6EAF2] bg-white/75 p-1"
               role="group"
               aria-label="Расход или доход"
             >
@@ -159,10 +162,10 @@ export function ConfirmDraft({
                   type="button"
                   onClick={() => onKindSwitch(opt.kind)}
                   aria-pressed={draft.kind === opt.kind}
-                  className={`flex-1 cursor-pointer rounded-xl py-2.5 text-xs font-bold transition ${
+                  className={`cursor-pointer rounded-xl py-2.5 text-xs font-bold transition ${
                     draft.kind === opt.kind
-                      ? "bg-[#5B6CFF] text-white shadow-md shadow-[#5B6CFF]/30"
-                      : "bg-white text-[#1A1B2E]/45 ring-1 ring-[#1A1B2E]/8"
+                      ? "bg-[#172033] text-white shadow-[0_8px_16px_-10px_rgba(23,32,51,0.65)]"
+                      : "text-[#697386] hover:bg-[#F5F7FC]"
                   }`}
                 >
                   {opt.label}
@@ -174,15 +177,16 @@ export function ConfirmDraft({
           {error !== null ? (
             <p
               role="alert"
-              className="mt-3 rounded-2xl bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+              className="mt-4 rounded-2xl bg-[#FFF0E9] px-3.5 py-3 text-sm text-[#C44822]"
             >
               {error}
             </p>
           ) : null}
 
-          {/* Amount-first: primary field, large type, autofocus on manual. */}
-          <label className="mt-5 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            Сумма (BYN)
+          <label className="mt-5 block rounded-[1.6rem] bg-[#172033] px-5 py-4 text-white shadow-[0_20px_34px_-22px_rgba(23,32,51,0.65)]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#C7D2FE]">
+              Сумма · BYN
+            </span>
             <input
               name="amount"
               value={draft.amount}
@@ -190,18 +194,18 @@ export function ConfirmDraft({
               inputMode="decimal"
               autoComplete="off"
               autoFocus={focusAmount}
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-4 text-2xl font-bold tabular-nums outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              className="mt-2 w-full border-0 bg-transparent p-0 text-[2.25rem] font-bold leading-none tracking-[-0.05em] text-white tabular-nums outline-none placeholder:text-white/35"
               aria-required
             />
           </label>
 
           {draft.kind === "expense" ? (
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
+            <div className="mt-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#697386]">
                 Категория
               </p>
               <div
-                className="mt-2 flex flex-wrap gap-2"
+                className="mt-2.5 flex flex-wrap gap-2"
                 role="group"
                 aria-label="Категория"
                 aria-required
@@ -216,8 +220,8 @@ export function ConfirmDraft({
                       aria-pressed={selected}
                       className={`cursor-pointer rounded-full px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] ${
                         selected
-                          ? "bg-[#5B6CFF] text-white shadow-md shadow-[#5B6CFF]/25"
-                          : "bg-white text-[#1A1B2E]/75 ring-1 ring-[#1A1B2E]/8"
+                          ? "bg-[#4F46E5] text-white shadow-[0_10px_18px_-12px_rgba(79,70,229,0.68)]"
+                          : "border border-white/80 bg-white/80 text-[#4B5565] shadow-[0_8px_18px_-18px_rgba(23,32,51,0.50)] hover:border-[#C7D2FE] hover:bg-white"
                       }`}
                     >
                       {c.displayName}
@@ -228,35 +232,42 @@ export function ConfirmDraft({
             </div>
           ) : null}
 
-          <label className="mt-4 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            Дата
-            <input
-              name="occurredOn"
-              type="date"
-              value={draft.occurredOn}
-              onChange={(e) => patch({ occurredOn: e.target.value })}
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
-              aria-required
-            />
-          </label>
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block rounded-2xl border border-white/85 bg-white/85 px-4 py-3 shadow-[0_10px_18px_-18px_rgba(23,32,51,0.45)]">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#697386]">
+                Дата
+              </span>
+              <input
+                name="occurredOn"
+                type="date"
+                value={draft.occurredOn}
+                onChange={(e) => patch({ occurredOn: e.target.value })}
+                className="mt-1.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#172033] outline-none"
+                aria-required
+              />
+            </label>
 
-          <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            Заметка
-            <input
-              name="note"
-              value={draft.note}
-              onChange={(e) => patch({ note: e.target.value })}
-              maxLength={MAX_NOTE_LENGTH}
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
-            />
-          </label>
+            <label className="block rounded-2xl border border-white/85 bg-white/85 px-4 py-3 shadow-[0_10px_18px_-18px_rgba(23,32,51,0.45)]">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#697386]">
+                Заметка
+              </span>
+              <input
+                name="note"
+                value={draft.note}
+                onChange={(e) => patch({ note: e.target.value })}
+                maxLength={MAX_NOTE_LENGTH}
+                className="mt-1.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#172033] outline-none placeholder:text-[#9AA4B2]"
+                placeholder="Необязательно"
+              />
+            </label>
+          </div>
         </div>
 
-        <div className="px-4 pb-5 pt-2">
+        <div className="border-t border-white/80 bg-white/72 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
           <button
             type="submit"
             disabled={!ready || isPending}
-            className="w-full cursor-pointer rounded-2xl bg-gradient-to-r from-[#5B6CFF] to-[#4F46E5] py-4 text-sm font-bold text-white shadow-lg shadow-[#5B6CFF]/35 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-30"
+            className="w-full cursor-pointer rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-35"
           >
             {isPending ? "Сохраняем…" : "Сохранить"}
           </button>

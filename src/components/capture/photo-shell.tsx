@@ -115,7 +115,7 @@ export function PhotoShell({
 
   return (
     <div
-      className="flex h-full flex-col bg-[#F3F0FA]"
+      className="flex h-full flex-col bg-[#F5F7FC] text-[#172033]"
       role="dialog"
       aria-labelledby="photo-shell-title"
     >
@@ -123,7 +123,7 @@ export function PhotoShell({
         <button
           type="button"
           onClick={mode.name === "progress" ? onCancelProgress : onDismiss}
-          className="cursor-pointer text-xs font-semibold text-[#1A1B2E]/45"
+          className="rounded-xl px-2.5 py-2 text-xs font-bold text-[#697386] transition hover:bg-white active:scale-95"
         >
           {mode.name === "progress" ? PHOTO_CANCEL_LABEL : "Закрыть"}
         </button>
@@ -162,19 +162,19 @@ export function PhotoShell({
         {mode.name === "progress" ? (
           <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
             <div
-              className="h-10 w-10 animate-spin rounded-full border-2 border-[#5B6CFF]/25 border-t-[#5B6CFF]"
+              className="h-10 w-10 animate-spin rounded-full border-2 border-[#818CF8]/25 border-t-[#4F46E5]"
               aria-hidden
             />
             <p
               id="photo-shell-title"
-              className="text-base font-semibold text-[#1A1B2E]"
+              className="text-base font-bold text-[#172033]"
             >
               {PHOTO_PROGRESS_LABEL}
             </p>
             <button
               type="button"
               onClick={onCancelProgress}
-              className="mt-2 cursor-pointer text-sm font-semibold text-[#5B6CFF]"
+              className="mt-2 cursor-pointer rounded-xl px-3 py-2 text-sm font-bold text-[#4F46E5] transition hover:bg-white"
             >
               {PHOTO_CANCEL_LABEL}
             </button>
@@ -226,25 +226,25 @@ function PickBody({
     <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
       <h1
         id="photo-shell-title"
-        className="text-2xl font-bold tracking-tight text-[#1A1B2E]"
+        className="text-3xl font-bold tracking-[-0.05em] text-[#172033]"
       >
         Фото чека
       </h1>
-      <p className="text-sm text-[#1A1B2E]/55">
+      <p className="max-w-xs text-sm leading-relaxed text-[#697386]">
         Сфотографируйте чек или выберите снимок. Фото не сохраняется после
         распознавания.
       </p>
       <button
         type="button"
         onClick={onCapture}
-        className="mt-2 w-full cursor-pointer rounded-2xl bg-gradient-to-r from-[#FF8A4C] to-[#F97316] py-4 text-sm font-bold text-white shadow-lg shadow-[#FF8A4C]/30 transition active:scale-[0.99]"
+        className="mt-3 w-full cursor-pointer rounded-2xl bg-gradient-to-br from-[#FB923C] to-[#E66B43] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(230,107,67,0.50)] transition hover:brightness-105 active:scale-[0.99]"
       >
         Сделать фото
       </button>
       <button
         type="button"
         onClick={onGallery}
-        className="w-full cursor-pointer rounded-2xl bg-white py-3.5 text-sm font-semibold text-[#1A1B2E] ring-1 ring-[#1A1B2E]/10 transition active:scale-[0.99]"
+        className="w-full cursor-pointer rounded-2xl border border-white/85 bg-white/85 py-3.5 text-sm font-bold text-[#172033] shadow-[0_12px_22px_-20px_rgba(23,32,51,0.35)] transition hover:bg-white active:scale-[0.99]"
       >
         Выбрать из галереи
       </button>
@@ -269,22 +269,22 @@ function ErrorBody({
     <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
       <h1
         id="photo-shell-title"
-        className="text-xl font-bold tracking-tight text-[#1A1B2E]"
+        className="text-2xl font-bold tracking-[-0.04em] text-[#172033]"
       >
         {title}
       </h1>
-      <p className="text-sm text-[#1A1B2E]/55">{body}</p>
+      <p className="max-w-xs text-sm leading-relaxed text-[#697386]">{body}</p>
       <button
         type="button"
         onClick={onPrimary}
-        className="mt-3 w-full cursor-pointer rounded-2xl bg-gradient-to-r from-[#5B6CFF] to-[#4F46E5] py-4 text-sm font-bold text-white shadow-lg shadow-[#5B6CFF]/35 transition active:scale-[0.99]"
+        className="mt-3 w-full cursor-pointer rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99]"
       >
         {primaryCta}
       </button>
       <button
         type="button"
         onClick={onDismiss}
-        className="w-full cursor-pointer py-2 text-sm font-semibold text-[#1A1B2E]/45"
+        className="w-full cursor-pointer rounded-xl py-2 text-sm font-bold text-[#697386] transition hover:bg-white"
       >
         На главную
       </button>

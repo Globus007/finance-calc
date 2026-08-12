@@ -5,6 +5,70 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+:root {
+  --ink: #172033;
+  --ink-muted: #697386;
+  --surface: #f5f7fc;
+  --surface-strong: #ffffff;
+  --line: #e6eaf2;
+  --brand: #4f46e5;
+  --brand-deep: #312e81;
+  --brand-soft: #e9eafe;
+  --positive: #0f9f80;
+  --positive-soft: #dff8ef;
+  --expense: #e66b43;
+  --expense-soft: #fff0e9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: #eef2ff;
+}
+
 body {
+  min-height: 100dvh;
   margin: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgb(199 210 254 / 0.72), transparent 28rem),
+    radial-gradient(circle at 85% 85%, rgb(204 251 241 / 0.48), transparent 25rem),
+    #eef2ff;
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgb(79 70 229 / 0.28);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: rgb(99 102 241 / 0.2);
+}
+
+.app-frame {
+  isolation: isolate;
+}
+
+@media (min-width: 768px) {
+  .app-frame {
+    min-height: calc(100dvh - 2.5rem);
+    border: 1px solid rgb(255 255 255 / 0.75);
+    border-radius: 2rem;
+    box-shadow: 0 28px 80px -32px rgb(49 46 129 / 0.38);
+  }
 }
