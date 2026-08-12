@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { requestLoginOtp, verifyLoginOtp } from "@/app/login/actions";
+import { createClient } from "@/lib/supabase/client";
 import { isValidEmail, isValidOtpCode, normalizeOtpCode } from "@/lib/auth/otp";
 
 const AUTH_LINK_ERROR =
@@ -25,6 +26,26 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
     initialError === "auth" ? AUTH_LINK_ERROR : null,
   );
   const [info, setInfo] = useState<string | null>(null);
+  const [oauthProvider, setOauthProvider] = useState<string | null>(null);
+
+  async function signInWithProvider(provider: "google" | "github" | "discord") {
+    setError(null);
+    setInfo(null);
+    setOauthProvider(provider);
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setOauthProvider(null);
+      setError("Не удалось начать вход через провайдера. Попробуйте ещё раз.");
+    }
+  }
 
   function sendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -111,7 +132,36 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
         <LoginHeader />
 
         {step === "email" ? (
-          <form onSubmit={sendCode} className="mt-7 space-y-4">
+          <>
+            <div className="mt-7 space-y-2.5">
+              <OAuthButton
+                label="Google"
+                provider="google"
+                pendingProvider={oauthProvider}
+                disabled={isPending}
+                onClick={signInWithProvider}
+              />
+              <OAuthButton
+                label="GitHub"
+                provider="github"
+                pendingProvider={oauthProvider}
+                disabled={isPending}
+                onClick={signInWithProvider}
+              />
+              <OAuthButton
+                label="Discord"
+                provider="discord"
+                pendingProvider={oauthProvider}
+                disabled={isPending}
+                onClick={signInWithProvider}
+              />
+            </div>
+            <div className="my-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AA4B2]">
+              <span className="h-px flex-1 bg-[#E6EAF2]" />
+              <span>или по email</span>
+              <span className="h-px flex-1 bg-[#E6EAF2]" />
+            </div>
+            <form onSubmit={sendCode} className="space-y-4">
             <label className="block">
               <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
                 Email
@@ -136,7 +186,8 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
             >
               {isPending ? "Отправляем…" : "Получить код"}
             </button>
-          </form>
+            </form>
+          </>
         ) : (
           <form onSubmit={submitCode} className="mt-7 space-y-4">
             <p className="rounded-2xl bg-[#EEF2FF] px-3.5 py-3 text-sm leading-relaxed text-[#4F46E5]">
@@ -207,6 +258,32 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
 }
 
 /** Static header — hoisted as a module-level component (rendering-hoist-jsx). */
+function OAuthButton({
+  label,
+  provider,
+  pendingProvider,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  provider: "google" | "github" | "discord";
+  pendingProvider: string | null;
+  disabled: boolean;
+  onClick: (provider: "google" | "github" | "discord") => void;
+}) {
+  const isPending = pendingProvider === provider;
+  return (
+    <button
+      type="button"
+      disabled={disabled || pendingProvider !== null}
+      onClick={() => onClick(provider)}
+      className="flex w-full items-center justify-center rounded-2xl border border-[#E6EAF2] bg-white px-4 py-3.5 text-sm font-bold text-[#172033] transition hover:border-[#C7D2FE] hover:bg-[#F8FAFC] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {isPending ? "Перенаправляем…" : `Войти через ${label}`}
+    </button>
+  );
+}
+
 function LoginHeader() {
   return (
     <>

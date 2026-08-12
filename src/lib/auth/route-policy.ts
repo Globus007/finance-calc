@@ -9,6 +9,10 @@ export function isAuthPublicPath(pathname: string): boolean {
   if (pathname === "/login" || pathname.startsWith("/login/")) {
     return true;
   }
+  // Auth callback — exchanges the PKCE code before session cookies exist.
+  if (pathname === "/auth/callback") {
+    return true;
+  }
   // Magic-link landing — must stay public before session cookies exist.
   if (pathname === "/auth/confirm") {
     return true;
