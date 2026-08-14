@@ -3,7 +3,6 @@ import { CategoryBreakdown } from "@/components/category-breakdown";
 import { HistoryList } from "@/components/history-list";
 import { IconTags } from "@/components/icons";
 import { MonthlyTotalCard } from "@/components/monthly-total-card";
-import { QuickCaptureActions } from "@/components/quick-capture-actions";
 import { monthLabelRu } from "@/lib/dates/minsk-month";
 import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
 import { loadHomeMoney } from "@/lib/money/load-money";
@@ -44,11 +43,7 @@ export default async function HomePage() {
         </Link>
       </header>
 
-      <div className="sticky top-0 z-10 -mx-4 mt-5 bg-gradient-to-b from-[#F5F7FC] via-[#F5F7FC]/95 to-transparent px-4 pb-3 pt-2 backdrop-blur-sm">
-        <QuickCaptureActions />
-      </div>
-
-      <div className="mt-2">
+      <div className="mt-6">
         <MonthlyTotalCard totals={totals} caption={monthCaption} />
       </div>
 
