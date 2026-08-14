@@ -30,15 +30,13 @@ export function CategoryBreakdown({
   return (
     <section aria-label={title}>
       {!hideTitle && (
-        <h2 className="text-base font-bold tracking-[-0.025em]">{title}</h2>
+        <h2 className="ui-title">{title}</h2>
       )}
 
       {visible.length === 0 ? (
-        <p className="mt-3 rounded-[1.35rem] border border-white/80 bg-white/75 px-4 py-7 text-center text-sm text-[#697386] shadow-[0_12px_24px_-20px_rgba(23,32,51,0.30)] backdrop-blur-sm">
-          {emptyMessage}
-        </p>
+        <p className="ui-empty">{emptyMessage}</p>
       ) : (
-        <ul className="mt-3 space-y-2.5">
+        <ul className="mt-2.5 space-y-2">
           {visible.map((row) => (
             <CategoryBreakdownRowItem
               key={row.categoryDisplayName}
@@ -56,22 +54,22 @@ function CategoryBreakdownRowItem({ row }: { row: CategoryBreakdownRow }) {
   const barWidth = Math.max(row.shareOfExpenseTotal * 100, 2);
 
   return (
-    <li className="rounded-[1.35rem] border border-white/85 bg-white/85 px-4 py-3.5 shadow-[0_10px_22px_-20px_rgba(23,32,51,0.34)] backdrop-blur-sm">
+    <li className="ui-card px-3.5 py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 truncate text-sm font-semibold tracking-[-0.01em] text-[#172033]">
+        <p className="min-w-0 truncate text-sm font-semibold tracking-[-0.01em] text-ink">
           {row.categoryDisplayName}
         </p>
         <div className="shrink-0 text-right">
-          <p className="text-sm font-bold tracking-[-0.02em] tabular-nums text-[#E66B43]">
+          <p className="text-sm font-bold tracking-[-0.02em] tabular-nums text-expense">
             −{formatByn(row.amount)}
           </p>
-          <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-[#697386]">
+          <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-ink-muted">
             {formatSharePercent(pct)}
           </p>
         </div>
       </div>
       <div
-        className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#172033]/[0.06]"
+        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]"
         aria-hidden
       >
         <div

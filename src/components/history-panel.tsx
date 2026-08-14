@@ -76,14 +76,12 @@ export function HistoryPanel({ items, categories }: Props) {
   return (
     <div>
       <section
-        className="mt-4 rounded-2xl bg-white p-3 shadow-[0_4px_16px_-8px_rgba(26,27,46,0.12)]"
+        className="ui-card mt-4 p-3"
         aria-label="Фильтры истории"
       >
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-          Тип
-        </p>
+        <p className="ui-kicker">Тип</p>
         <div
-          className="mt-1.5 grid grid-cols-3 gap-1 rounded-xl bg-[#F3F0FA] p-1"
+          className="mt-1.5 grid grid-cols-3 gap-1 rounded-lg bg-surface p-1"
           role="group"
           aria-label="Тип записи"
         >
@@ -104,13 +102,13 @@ export function HistoryPanel({ items, categories }: Props) {
           />
         </div>
 
-        <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-          Категория
+        <label className="mt-3 block">
+          <span className="ui-kicker">Категория</span>
           <select
             value={filters.categoryId ?? ""}
             onChange={(e) => setCategoryId(e.target.value)}
             disabled={categoryDisabled}
-            className="mt-1.5 w-full rounded-xl border-0 bg-[#F3F0FA] px-3 py-2.5 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF] disabled:cursor-not-allowed disabled:opacity-45"
+            className="ui-field mt-1.5 disabled:cursor-not-allowed disabled:opacity-45"
             aria-disabled={categoryDisabled}
           >
             <option value="">Все категории</option>
@@ -122,36 +120,36 @@ export function HistoryPanel({ items, categories }: Props) {
           </select>
         </label>
         {categoryDisabled ? (
-          <p className="mt-1 text-[11px] text-[#1A1B2E]/40">
+          <p className="mt-1 text-[11px] text-ink-muted">
             У доходов нет категории.
           </p>
         ) : categorySelected ? (
-          <p className="mt-1 text-[11px] text-[#1A1B2E]/40">
+          <p className="mt-1 text-[11px] text-ink-muted">
             Доходы скрыты: у них нет категории.
           </p>
         ) : null}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            С даты
+          <label className="block">
+            <span className="ui-kicker">С даты</span>
             <input
               type="date"
               value={filters.from ?? ""}
               onChange={(e) => setFrom(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border-0 bg-[#F3F0FA] px-3 py-2.5 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              className="ui-field mt-1.5"
             />
           </label>
-          <label className="block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            По дату
+          <label className="block">
+            <span className="ui-kicker">По дату</span>
             <input
               type="date"
               value={filters.to ?? ""}
               onChange={(e) => setTo(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border-0 bg-[#F3F0FA] px-3 py-2.5 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              className="ui-field mt-1.5"
             />
           </label>
         </div>
-        <p className="mt-1 text-[11px] text-[#1A1B2E]/40">
+        <p className="mt-1 text-[11px] text-ink-muted">
           Календарные даты · Europe/Minsk
         </p>
 
@@ -159,7 +157,7 @@ export function HistoryPanel({ items, categories }: Props) {
           <button
             type="button"
             onClick={clearFilters}
-            className="mt-3 w-full cursor-pointer rounded-xl py-2 text-sm font-semibold text-[#5B6CFF] transition active:scale-[0.99]"
+            className="mt-3 w-full cursor-pointer rounded-control py-2 text-sm font-semibold text-brand transition active:scale-[0.99]"
           >
             Сбросить фильтры
           </button>
@@ -185,10 +183,10 @@ function KindButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`cursor-pointer rounded-lg py-2 text-xs font-semibold transition ${
+      className={`cursor-pointer rounded-md py-2 text-xs font-semibold transition ${
         active
-          ? "bg-white text-[#1A1B2E] shadow-sm"
-          : "text-[#1A1B2E]/45 hover:text-[#1A1B2E]/70"
+          ? "bg-surface-strong text-ink shadow-sm"
+          : "text-ink-muted hover:text-ink"
       }`}
     >
       {label}

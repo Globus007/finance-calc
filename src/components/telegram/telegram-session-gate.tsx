@@ -37,8 +37,8 @@ export function TelegramSessionGate({
   // Match SSR and first client paint before reading Telegram.WebApp.
   if (!mounted) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center bg-[#F3F0FA] px-5 py-10 text-[#1A1B2E]">
-        <p className="text-center text-sm text-[#1A1B2E]/55" role="status">
+      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center bg-surface px-5 py-10 text-ink">
+        <p className="text-center text-sm text-ink-muted" role="status">
           Загрузка…
         </p>
       </div>
@@ -52,10 +52,10 @@ export function TelegramSessionGate({
 
   // Telegram WebView: silent session exchange; never show email OTP.
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center bg-[#F3F0FA] px-5 py-10 text-[#1A1B2E]">
+    <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center bg-surface px-5 py-10 text-ink">
       <TelegramBootstrap onState={onState} />
       {tgState?.kind === "exchanging" || tgState === null ? (
-        <p className="text-center text-sm text-[#1A1B2E]/55" role="status">
+        <p className="text-center text-sm text-ink-muted" role="status">
           Вход через Telegram…
         </p>
       ) : null}

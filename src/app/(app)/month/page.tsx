@@ -28,21 +28,21 @@ export default async function MonthPage({
   const breakdown = computeCategoryBreakdown(items);
 
   return (
-    <div className="px-4 pb-4 pt-3">
-      <h1 className="text-2xl font-bold tracking-tight">Итог месяца</h1>
-      <p className="mt-1 text-sm text-[#1A1B2E]/45">Europe/Minsk · живой итог</p>
+    <div className="ui-page">
+      <h1 className="text-[1.55rem] font-bold tracking-[-0.04em]">Итог месяца</h1>
+      <p className="mt-1 text-sm text-ink-muted">Europe/Minsk · живой итог</p>
 
       <MonthSwitcher yearMonth={yearMonth} />
 
-      <div className="mt-4">
+      <div className="mt-3.5">
         <MonthlyTotalCard totals={totals} caption="Нетто" showBars />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-5">
         <CategoryBreakdown rows={breakdown} />
       </div>
 
-      <p className="mt-4 text-center text-[11px] text-[#1A1B2E]/40">
+      <p className="mt-4 text-center text-[11px] text-ink-muted">
         {items.length === 0
           ? "Пока нет расходов и доходов · живой итог"
           : `${formatCount(items.length)} · живой итог`}

@@ -19,6 +19,7 @@ import {
   TG_DENY_STALE,
   TG_DENY_UNMAPPED,
 } from "@/lib/telegram/copy";
+import { paintTelegramNativeChrome } from "@/lib/telegram/native-chrome";
 
 type TelegramWebApp = {
   initData: string;
@@ -59,33 +60,7 @@ function denyMessage(reason: string | undefined): string {
 }
 
 function applyTheme(webApp: TelegramWebApp) {
-  const root = document.documentElement;
-  const tp = webApp.themeParams ?? {};
-  const map: Record<string, string | undefined> = {
-    "--tg-bg": tp.bg_color,
-    "--tg-text": tp.text_color,
-    "--tg-hint": tp.hint_color,
-    "--tg-button": tp.button_color,
-    "--tg-button-text": tp.button_text_color,
-    "--tg-secondary-bg": tp.secondary_bg_color,
-  };
-  for (const [cssVar, value] of Object.entries(map)) {
-    if (value) root.style.setProperty(cssVar, value);
-  }
-  if (tp.bg_color && webApp.setBackgroundColor) {
-    try {
-      webApp.setBackgroundColor(tp.bg_color);
-    } catch {
-      // older clients
-    }
-  }
-  if (tp.header_bg_color && webApp.setHeaderColor) {
-    try {
-      webApp.setHeaderColor(tp.header_bg_color);
-    } catch {
-      // older clients
-    }
-  }
+  paintTelegramNativeChrome(webApp);
 }
 
 function subscribeTelegram() {
@@ -199,7 +174,7 @@ export function TelegramBootstrap({
   if (phase === "exchanging") {
     return (
       <div
-        className="mb-4 rounded-2xl border border-[#C4B5FD]/60 bg-white/80 px-4 py-3 text-sm text-[#1A1B2E]"
+        className="ui-card mb-4 px-4 py-3 text-sm text-ink"
         role="status"
       >
         Вход через Telegram…
@@ -210,7 +185,7 @@ export function TelegramBootstrap({
   if (phase === "denied") {
     return (
       <div
-        className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+        className="mb-4 rounded-card border border-expense/25 bg-expense-soft px-4 py-3 text-sm text-[#C44822]"
         role="alert"
       >
         {denyText ?? TG_DENY_MINT}

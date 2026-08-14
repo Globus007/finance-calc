@@ -351,14 +351,14 @@ export function CaptureLayer() {
   if (phase.name === "idle") return null;
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-[#F5F7FC]">
+    <div className="absolute inset-0 z-40 flex flex-col bg-surface">
       {phase.name === "manual-loading" ? (
         <div
           className="flex flex-1 flex-col items-center justify-center gap-2 px-4"
           role="status"
           aria-live="polite"
         >
-          <p className="text-sm font-semibold text-[#697386]">
+          <p className="text-sm font-semibold text-ink-muted">
             Загружаем категории…
           </p>
         </div>
@@ -409,7 +409,7 @@ export function CaptureLayer() {
           {loadError !== null ? (
             <p
               role="alert"
-              className="mx-4 mt-2 rounded-2xl bg-[#FFF0E9] px-3.5 py-3 text-sm text-[#C44822]"
+              className="mx-4 mt-2 rounded-control bg-expense-soft px-3.5 py-3 text-sm text-[#C44822]"
             >
               {loadError}
             </p>

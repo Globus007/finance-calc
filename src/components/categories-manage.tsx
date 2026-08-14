@@ -50,15 +50,12 @@ export function CategoriesManage({ initialCategories }: Props) {
   }
 
   return (
-    <div className="px-4 pb-6 pt-3">
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-[#5B6CFF]"
-      >
+    <div className="ui-page">
+      <Link href="/" className="ui-back">
         <IconArrowLeft size={14} /> Назад
       </Link>
-      <h1 className="mt-2 text-2xl font-bold tracking-tight">Категории</h1>
-      <p className="mt-1 text-xs text-[#1A1B2E]/45">
+      <h1 className="mt-2 text-[1.55rem] font-bold tracking-[-0.04em]">Категории</h1>
+      <p className="mt-1 text-xs text-ink-muted">
         Скрытые не показываются в выборе для новых расходов. «Прочее» — системная
         категория по умолчанию.
       </p>
@@ -66,7 +63,7 @@ export function CategoriesManage({ initialCategories }: Props) {
       {error !== null ? (
         <p
           role="alert"
-          className="mt-3 rounded-2xl bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+          className="mt-3 rounded-control bg-expense-soft px-3 py-2 text-sm text-[#C44822]"
         >
           {error}
         </p>
@@ -84,12 +81,12 @@ export function CategoriesManage({ initialCategories }: Props) {
           placeholder="Своя категория"
           maxLength={MAX_CATEGORY_DISPLAY_NAME_LENGTH}
           disabled={isPending}
-          className="min-w-0 flex-1 rounded-2xl border border-[#1A1B2E]/10 bg-white px-3 py-2.5 text-sm outline-none ring-[#5B6CFF]/30 focus:ring-2"
+          className="ui-field min-w-0 flex-1"
         />
         <button
           type="submit"
           disabled={isPending || newName.trim().length === 0}
-          className="shrink-0 rounded-2xl bg-[#5B6CFF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#5B6CFF]/30 disabled:opacity-40"
+          className="ui-btn-primary w-auto shrink-0 px-4 py-2.5"
         >
           Добавить
         </button>
@@ -131,7 +128,7 @@ export function CategoriesManage({ initialCategories }: Props) {
       </ul>
 
       {initialCategories.length === 0 ? (
-        <p className="mt-6 text-center text-sm text-[#1A1B2E]/45">
+        <p className="mt-6 text-center text-sm text-ink-muted">
           Категории появятся после входа. Если список пуст, обновите страницу.
         </p>
       ) : null}
@@ -172,7 +169,7 @@ function CategoryManageRow({
       : "своя";
 
   return (
-    <li className="rounded-2xl bg-white px-4 py-3 shadow-sm shadow-black/5">
+    <li className="ui-card px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {isRenaming ? (
@@ -194,13 +191,13 @@ function CategoryManageRow({
                 maxLength={MAX_CATEGORY_DISPLAY_NAME_LENGTH}
                 disabled={isPending}
                 autoFocus
-                className="w-full rounded-xl border border-[#1A1B2E]/10 px-3 py-2 text-sm outline-none ring-[#5B6CFF]/30 focus:ring-2"
+                className="ui-field"
               />
               <div className="flex flex-wrap gap-2">
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="text-xs font-semibold text-[#5B6CFF]"
+                  className="text-xs font-semibold text-brand"
                 >
                   Сохранить
                 </button>
@@ -208,7 +205,7 @@ function CategoryManageRow({
                   type="button"
                   disabled={isPending}
                   onClick={onCancelRename}
-                  className="text-xs font-semibold text-[#1A1B2E]/45"
+                  className="text-xs font-semibold text-ink-muted"
                 >
                   Отмена
                 </button>
@@ -223,7 +220,7 @@ function CategoryManageRow({
               >
                 {c.displayName}
               </p>
-              <p className="text-[10px] uppercase tracking-wider text-[#1A1B2E]/35">
+              <p className="text-[10px] uppercase tracking-wider text-ink-muted">
                 {originLabel}
                 {c.isHidden ? " · скрыта" : ""}
                 {c.isInUse && c.origin === "user" ? " · в расходах" : ""}
@@ -255,12 +252,12 @@ function CategoryManageRow({
               </ActionButton>
             ) : null}
             {c.origin === "user" && !c.canDelete && c.isInUse ? (
-              <span className="text-[10px] text-[#1A1B2E]/35">
+              <span className="text-[10px] text-ink-muted">
                 Удаление недоступно
               </span>
             ) : null}
             {c.isSystemFallback ? (
-              <span className="text-[10px] text-[#1A1B2E]/35">
+              <span className="text-[10px] text-ink-muted">
                 Нельзя изменить
               </span>
             ) : null}
@@ -288,7 +285,7 @@ function ActionButton({
       disabled={disabled}
       onClick={onClick}
       className={`text-xs font-medium disabled:opacity-40 ${
-        danger ? "text-[#DC2626]" : "text-[#5B6CFF]"
+        danger ? "text-[#C44822]" : "text-brand"
       }`}
     >
       {children}

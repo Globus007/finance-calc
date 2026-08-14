@@ -247,7 +247,7 @@ export function VoiceShell({
 
   return (
     <div
-      className="flex h-full flex-col bg-[#F5F7FC] text-[#172033]"
+      className="flex h-full flex-col bg-surface text-ink"
       role="dialog"
       aria-labelledby="voice-shell-title"
     >
@@ -264,7 +264,7 @@ export function VoiceShell({
                   }
                 : onDismiss
           }
-          className="rounded-xl px-2.5 py-2 text-xs font-bold text-[#697386] transition hover:bg-white active:scale-95"
+          className="rounded-control px-2.5 py-2 text-xs font-bold text-ink-muted transition hover:bg-surface-strong active:scale-95"
         >
           {mode.name === "progress" || mode.name === "recording"
             ? VOICE_CANCEL_LABEL
@@ -276,20 +276,20 @@ export function VoiceShell({
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 pb-10">
         {mode.name === "ready" ? (
           <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-            <div className="flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-[#E9EAFE] text-[#4F46E5] shadow-[0_16px_30px_-20px_rgba(79,70,229,0.70)]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-hero bg-brand-soft text-brand shadow-card">
               <IconMic size={36} />
             </div>
             <h1
               id="voice-shell-title"
-              className="text-3xl font-bold tracking-[-0.05em] text-[#172033]"
+              className="text-3xl font-bold tracking-[-0.05em] text-ink"
             >
               {VOICE_READY_TITLE}
             </h1>
-            <p className="max-w-xs text-sm leading-relaxed text-[#697386]">{VOICE_READY_BODY}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-ink-muted">{VOICE_READY_BODY}</p>
             <button
               type="button"
               onClick={onRecordClick}
-              className="mt-3 w-full cursor-pointer rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99]"
+              className="ui-btn-primary mt-3 w-full py-3.5"
             >
               {VOICE_RECORD_CTA}
             </button>
@@ -299,27 +299,30 @@ export function VoiceShell({
         {mode.name === "recording" ? (
           <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
             <div className="relative flex h-24 w-24 items-center justify-center">
-              <span className="absolute inset-0 animate-ping rounded-full bg-[#818CF8]/25" />
-              <span className="relative flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-gradient-to-br from-[#6366F1] to-[#3730A3] text-white shadow-[0_16px_30px_-16px_rgba(79,70,229,0.70)]">
+              <span className="absolute inset-0 animate-ping rounded-full bg-brand/20" />
+              <span
+                className="relative flex h-20 w-20 items-center justify-center rounded-hero text-white shadow-hero"
+                style={{ background: "var(--brand-fill)" }}
+              >
                 <IconMic size={32} />
               </span>
             </div>
             <p
               id="voice-shell-title"
-              className="text-base font-bold text-[#172033]"
+              className="text-base font-bold text-ink"
               role="status"
               aria-live="polite"
             >
               {VOICE_RECORDING_LABEL}
             </p>
-            <p className="font-mono text-2xl font-bold tabular-nums text-[#4F46E5]">
+            <p className="font-mono text-2xl font-bold tabular-nums text-brand">
               {formatElapsed(displayElapsed)} /{" "}
               {formatElapsed(VOICE_MAX_SECONDS)}
             </p>
             <button
               type="button"
               onClick={finishRecording}
-              className="mt-3 w-full cursor-pointer rounded-2xl bg-[#E66B43] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(230,107,67,0.48)] transition hover:brightness-105 active:scale-[0.99]"
+              className="mt-3 w-full cursor-pointer rounded-control bg-expense py-3.5 text-sm font-bold text-white shadow-[0_12px_22px_-12px_rgba(230,107,67,0.42)] transition hover:brightness-105 active:scale-[0.99]"
             >
               {VOICE_STOP_CTA}
             </button>
@@ -333,19 +336,19 @@ export function VoiceShell({
             aria-live="polite"
           >
             <div
-              className="h-10 w-10 animate-spin rounded-full border-2 border-[#818CF8]/25 border-t-[#4F46E5]"
+              className="h-10 w-10 animate-spin rounded-full border-2 border-brand-soft border-t-brand"
               aria-hidden
             />
             <p
               id="voice-shell-title"
-              className="text-base font-bold text-[#172033]"
+              className="text-base font-bold text-ink"
             >
               {VOICE_PROGRESS_LABEL}
             </p>
             <button
               type="button"
               onClick={onCancelProgress}
-              className="mt-2 cursor-pointer rounded-xl px-3 py-2 text-sm font-bold text-[#4F46E5] transition hover:bg-white"
+              className="mt-2 cursor-pointer rounded-control px-3 py-2 text-sm font-bold text-brand transition hover:bg-surface-strong"
             >
               {VOICE_CANCEL_LABEL}
             </button>
@@ -401,22 +404,22 @@ function ErrorBody({
     <div className="flex w-full max-w-sm flex-col items-center gap-3 text-center">
       <h1
         id="voice-shell-title"
-        className="text-2xl font-bold tracking-[-0.04em] text-[#172033]"
+        className="text-2xl font-bold tracking-[-0.04em] text-ink"
       >
         {title}
       </h1>
-      <p className="max-w-xs text-sm leading-relaxed text-[#697386]">{body}</p>
+      <p className="max-w-xs text-sm leading-relaxed text-ink-muted">{body}</p>
       <button
         type="button"
         onClick={onPrimary}
-        className="mt-3 w-full cursor-pointer rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99]"
+        className="ui-btn-primary mt-3 w-full py-3.5"
       >
         {primaryCta}
       </button>
       <button
         type="button"
         onClick={onDismiss}
-        className="w-full cursor-pointer rounded-xl py-2 text-sm font-bold text-[#697386] transition hover:bg-white"
+        className="w-full cursor-pointer rounded-control py-2 text-sm font-bold text-ink-muted transition hover:bg-surface-strong"
       >
         На главную
       </button>

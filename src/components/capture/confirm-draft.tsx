@@ -114,7 +114,7 @@ export function ConfirmDraft({
 
   return (
     <div
-      className="flex h-full flex-col bg-[#F5F7FC] text-[#172033]"
+      className="flex h-full flex-col bg-surface text-ink"
       role="dialog"
       aria-labelledby="confirm-draft-title"
     >
@@ -122,7 +122,7 @@ export function ConfirmDraft({
         <button
           type="button"
           onClick={onDiscard}
-          className="rounded-xl px-2.5 py-2 text-xs font-bold text-[#697386] transition hover:bg-white active:scale-95"
+          className="rounded-control px-2.5 py-2 text-xs font-bold text-ink-muted transition hover:bg-surface-strong active:scale-95"
         >
           Отбросить
         </button>
@@ -135,19 +135,19 @@ export function ConfirmDraft({
         noValidate
       >
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#4F46E5]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">
             Новая операция
           </p>
           <h1
             id="confirm-draft-title"
-            className="mt-1 text-[1.7rem] font-bold tracking-[-0.045em]"
+            className="mt-1 text-[1.55rem] font-bold tracking-[-0.045em]"
           >
             {title}
           </h1>
 
           {allowKindSwitch ? (
             <div
-              className="mt-4 grid grid-cols-2 gap-1 rounded-2xl border border-[#E6EAF2] bg-white/75 p-1"
+              className="ui-card mt-4 grid grid-cols-2 gap-1 p-1"
               role="group"
               aria-label="Расход или доход"
             >
@@ -162,10 +162,10 @@ export function ConfirmDraft({
                   type="button"
                   onClick={() => onKindSwitch(opt.kind)}
                   aria-pressed={draft.kind === opt.kind}
-                  className={`cursor-pointer rounded-xl py-2.5 text-xs font-bold transition ${
+                  className={`cursor-pointer rounded-lg py-2.5 text-xs font-bold transition ${
                     draft.kind === opt.kind
-                      ? "bg-[#172033] text-white shadow-[0_8px_16px_-10px_rgba(23,32,51,0.65)]"
-                      : "text-[#697386] hover:bg-[#F5F7FC]"
+                      ? "bg-hero text-white shadow-card"
+                      : "text-ink-muted hover:bg-surface"
                   }`}
                 >
                   {opt.label}
@@ -177,14 +177,14 @@ export function ConfirmDraft({
           {error !== null ? (
             <p
               role="alert"
-              className="mt-4 rounded-2xl bg-[#FFF0E9] px-3.5 py-3 text-sm text-[#C44822]"
+              className="mt-4 rounded-control bg-expense-soft px-3.5 py-3 text-sm text-[#C44822]"
             >
               {error}
             </p>
           ) : null}
 
-          <label className="mt-5 block rounded-[1.6rem] bg-[#172033] px-5 py-4 text-white shadow-[0_20px_34px_-22px_rgba(23,32,51,0.65)]">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#C7D2FE]">
+          <label className="mt-5 block rounded-hero bg-hero px-4 py-3.5 text-white shadow-hero">
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-hero-caption">
               Сумма · BYN
             </span>
             <input
@@ -194,16 +194,14 @@ export function ConfirmDraft({
               inputMode="decimal"
               autoComplete="off"
               autoFocus={focusAmount}
-              className="mt-2 w-full border-0 bg-transparent p-0 text-[2.25rem] font-bold leading-none tracking-[-0.05em] text-white tabular-nums outline-none placeholder:text-white/35"
+              className="mt-2 w-full border-0 bg-transparent p-0 text-[2.1rem] font-bold leading-none tracking-[-0.05em] text-white tabular-nums outline-none placeholder:text-white/35"
               aria-required
             />
           </label>
 
           {draft.kind === "expense" ? (
             <div className="mt-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#697386]">
-                Категория
-              </p>
+              <p className="ui-kicker">Категория</p>
               <div
                 className="mt-2.5 flex flex-wrap gap-2"
                 role="group"
@@ -220,8 +218,8 @@ export function ConfirmDraft({
                       aria-pressed={selected}
                       className={`cursor-pointer rounded-full px-3.5 py-2 text-xs font-semibold transition active:scale-[0.98] ${
                         selected
-                          ? "bg-[#4F46E5] text-white shadow-[0_10px_18px_-12px_rgba(79,70,229,0.68)]"
-                          : "border border-white/80 bg-white/80 text-[#4B5565] shadow-[0_8px_18px_-18px_rgba(23,32,51,0.50)] hover:border-[#C7D2FE] hover:bg-white"
+                          ? "bg-brand text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]"
+                          : "border border-line bg-surface-strong text-ink-muted hover:border-brand-soft hover:bg-white"
                       }`}
                     >
                       {c.displayName}
@@ -233,41 +231,37 @@ export function ConfirmDraft({
           ) : null}
 
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block rounded-2xl border border-white/85 bg-white/85 px-4 py-3 shadow-[0_10px_18px_-18px_rgba(23,32,51,0.45)]">
-              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#697386]">
-                Дата
-              </span>
+            <label className="ui-card block px-4 py-3">
+              <span className="ui-kicker">Дата</span>
               <input
                 name="occurredOn"
                 type="date"
                 value={draft.occurredOn}
                 onChange={(e) => patch({ occurredOn: e.target.value })}
-                className="mt-1.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#172033] outline-none"
+                className="mt-1.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-ink outline-none"
                 aria-required
               />
             </label>
 
-            <label className="block rounded-2xl border border-white/85 bg-white/85 px-4 py-3 shadow-[0_10px_18px_-18px_rgba(23,32,51,0.45)]">
-              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#697386]">
-                Заметка
-              </span>
+            <label className="ui-card block px-4 py-3">
+              <span className="ui-kicker">Заметка</span>
               <input
                 name="note"
                 value={draft.note}
                 onChange={(e) => patch({ note: e.target.value })}
                 maxLength={MAX_NOTE_LENGTH}
-                className="mt-1.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#172033] outline-none placeholder:text-[#9AA4B2]"
+                className="mt-1.5 w-full border-0 bg-transparent p-0 text-sm font-semibold text-ink outline-none placeholder:text-ink-muted"
                 placeholder="Необязательно"
               />
             </label>
           </div>
         </div>
 
-        <div className="border-t border-white/80 bg-white/72 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
+        <div className="border-t border-line bg-surface-strong/90 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
           <button
             type="submit"
             disabled={!ready || isPending}
-            className="w-full cursor-pointer rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] py-4 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-35"
+            className="ui-btn-primary w-full py-3.5"
           >
             {isPending ? "Сохраняем…" : "Сохранить"}
           </button>
