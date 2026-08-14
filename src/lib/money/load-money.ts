@@ -3,7 +3,7 @@ import {
   currentYearMonth,
   monthDateBounds,
 } from "@/lib/dates/minsk-month";
-import { computeRemainder } from "@/lib/opening/compute-remainder";
+import { remainderFromTotals } from "@/lib/opening/compute-remainder";
 import type { Opening } from "@/lib/opening/types";
 import { createClient } from "@/lib/supabase/server";
 import type { HistoryItem, MonthlyTotal } from "./history-types";
@@ -66,13 +66,16 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
     RECENT_LIMIT,
   );
 
-  let remainderItems: HistoryItem[] = [];
+  // Remainder is a live sum, not a page of History. Data API max_rows
+  // (1000) would silently drop later committed rows if we selected them
+  // and treated the truncated list as the full window.
+  let remainder: number | null = null;
   if (opening) {
-    const [fromOpeningExpenses, fromOpeningIncomes] = await Promise.all([
-      fetchExpenses(supabase, { start: opening.openedOn }),
-      fetchIncomes(supabase, { start: opening.openedOn }),
+    const [expenseTotal, incomeTotal] = await Promise.all([
+      fetchCommittedAmountTotal(supabase, "expenses", opening.openedOn),
+      fetchCommittedAmountTotal(supabase, "incomes", opening.openedOn),
     ]);
-    remainderItems = mergeHistory(fromOpeningExpenses, fromOpeningIncomes);
+    remainder = remainderFromTotals(opening, incomeTotal, expenseTotal);
   }
 
   return {
@@ -81,7 +84,7 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
     recent,
     monthItems,
     opening,
-    remainder: computeRemainder(opening, remainderItems),
+    remainder,
   };
 });
 
@@ -187,6 +190,32 @@ async function fetchIncomes(
     );
   }
   return (data as IncomeDbRow[]).map(mapIncomeRow);
+}
+
+async function fetchCommittedAmountTotal(
+  supabase: SupabaseServer,
+  table: "expenses" | "incomes",
+  startOn: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("amount.sum()")
+    .gte("occurred_on", startOn);
+
+  if (error || !data) {
+    throw new Error(
+      `Failed to load ${table} total: ${error?.message ?? "no data"}`,
+    );
+  }
+  const row = data[0] as { sum?: string | number | null } | undefined;
+  return parseMoney(row?.sum);
+}
+
+function parseMoney(value: string | number | null | undefined): number {
+  if (value == null) return 0;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100) / 100;
 }
 
 async function fetchOpening(supabase: SupabaseServer): Promise<Opening | null> {

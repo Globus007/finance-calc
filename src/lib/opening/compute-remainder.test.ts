@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeRemainder } from "./compute-remainder";
+import { computeRemainder, remainderFromTotals } from "./compute-remainder";
 import type { HistoryItem } from "@/lib/money/history-types";
 import type { Opening } from "./types";
 
@@ -42,6 +42,22 @@ function income(
 const opening = (amount: number, openedOn: string): Opening => ({
   amount,
   openedOn,
+});
+
+describe("remainderFromTotals", () => {
+  it("returns null when Opening is absent (not 0)", () => {
+    expect(remainderFromTotals(null, 10, 5)).toBeNull();
+  });
+
+  it("is Opening + committed Incomes − committed Expenses", () => {
+    expect(remainderFromTotals(opening(100, "2026-08-10"), 2100, 60.7)).toBe(
+      2139.3,
+    );
+  });
+
+  it("treats empty committed totals as the Opening amount", () => {
+    expect(remainderFromTotals(opening(250.5, "2026-08-10"), 0, 0)).toBe(250.5);
+  });
 });
 
 describe("computeRemainder", () => {
