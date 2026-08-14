@@ -89,7 +89,7 @@ function NavTab({
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-semibold transition ${
+      className={`flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-semibold transition-[color,transform] duration-300 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 ${
         active
           ? "text-[#4F46E5]"
           : "text-[#697386] hover:text-[#172033]"
@@ -97,15 +97,21 @@ function NavTab({
       aria-current={active ? "page" : undefined}
     >
       <span
-        className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
+        className={`nav-tab-icon flex h-8 w-8 items-center justify-center rounded-xl transition-[background-color,box-shadow,transform] duration-300 ease-out ${
           active
-            ? "bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] shadow-[0_8px_16px_-12px_rgba(79,70,229,0.52)]"
+            ? "nav-tab-icon-active bg-gradient-to-br from-[#EEF2FF] to-[#E0E7FF] shadow-[0_8px_16px_-12px_rgba(79,70,229,0.52)]"
             : ""
         }`}
       >
         {icon}
       </span>
-      <span>{label}</span>
+      <span className={`nav-tab-label ${active ? "nav-tab-label-active" : ""}`}>
+        {label}
+      </span>
+      <span
+        aria-hidden
+        className={`nav-tab-indicator ${active ? "nav-tab-indicator-active" : ""}`}
+      />
     </Link>
   );
 }
