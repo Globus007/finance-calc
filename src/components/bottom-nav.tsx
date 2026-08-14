@@ -89,7 +89,7 @@ function NavTab({
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-semibold transition-[color,transform] duration-300 ease-out active:scale-[0.98] ${
+      className={`flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-semibold transition-[color,transform] duration-300 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 ${
         active
           ? "text-[#4F46E5]"
           : "text-[#697386] hover:text-[#172033]"
