@@ -3,6 +3,8 @@ import {
   currentYearMonth,
   monthDateBounds,
 } from "@/lib/dates/minsk-month";
+import { remainderFromTotals } from "@/lib/opening/compute-remainder";
+import type { Opening } from "@/lib/opening/types";
 import { createClient } from "@/lib/supabase/server";
 import type { HistoryItem, MonthlyTotal } from "./history-types";
 import {
@@ -24,6 +26,8 @@ export type HomeMoney = {
   recent: HistoryItem[];
   /** Current-month committed items (for Category breakdown snippet). */
   monthItems: HistoryItem[];
+  opening: Opening | null;
+  remainder: number | null;
 };
 
 export type MonthMoney = {
@@ -33,7 +37,7 @@ export type MonthMoney = {
 };
 
 /**
- * Home: current-month live Monthly total + recent mixed History (committed only).
+ * Home: Remainder (if Opening exists) + current-month totals + recent History.
  */
 export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
   const yearMonth = currentYearMonth();
@@ -47,12 +51,13 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
   }
 
   // Month totals need full month rows; recent needs mixed latest overall.
-  const [monthExpenses, monthIncomes, recentExpenses, recentIncomes] =
+  const [monthExpenses, monthIncomes, recentExpenses, recentIncomes, opening] =
     await Promise.all([
       fetchExpenses(supabase, { start, end }),
       fetchIncomes(supabase, { start, end }),
       fetchExpenses(supabase, { limit: RECENT_LIMIT * 2 }),
       fetchIncomes(supabase, { limit: RECENT_LIMIT * 2 }),
+      fetchOpening(supabase),
     ]);
 
   const monthItems = mergeHistory(monthExpenses, monthIncomes);
@@ -61,11 +66,25 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
     RECENT_LIMIT,
   );
 
+  // Remainder is a live sum, not a page of History. Data API max_rows
+  // (1000) would silently drop later committed rows if we selected them
+  // and treated the truncated list as the full window.
+  let remainder: number | null = null;
+  if (opening) {
+    const [expenseTotal, incomeTotal] = await Promise.all([
+      fetchCommittedAmountTotal(supabase, "expenses", opening.openedOn),
+      fetchCommittedAmountTotal(supabase, "incomes", opening.openedOn),
+    ]);
+    remainder = remainderFromTotals(opening, incomeTotal, expenseTotal);
+  }
+
   return {
     yearMonth,
     totals: computeMonthlyTotal(monthItems),
     recent,
     monthItems,
+    opening,
+    remainder,
   };
 });
 
@@ -173,11 +192,58 @@ async function fetchIncomes(
   return (data as IncomeDbRow[]).map(mapIncomeRow);
 }
 
+async function fetchCommittedAmountTotal(
+  supabase: SupabaseServer,
+  table: "expenses" | "incomes",
+  startOn: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from(table)
+    .select("amount.sum()")
+    .gte("occurred_on", startOn);
+
+  if (error || !data) {
+    throw new Error(
+      `Failed to load ${table} total: ${error?.message ?? "no data"}`,
+    );
+  }
+  const row = data[0] as { sum?: string | number | null } | undefined;
+  return parseMoney(row?.sum);
+}
+
+function parseMoney(value: string | number | null | undefined): number {
+  if (value == null) return 0;
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100) / 100;
+}
+
+async function fetchOpening(supabase: SupabaseServer): Promise<Opening | null> {
+  const { data, error } = await supabase
+    .from("openings")
+    .select("amount, opened_on")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load opening: ${error.message}`);
+  }
+  if (!data) return null;
+
+  const amount =
+    typeof data.amount === "number" ? data.amount : Number(data.amount);
+  return {
+    amount: Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0,
+    openedOn: data.opened_on as string,
+  };
+}
+
 function emptyHome(yearMonth: string): HomeMoney {
   return {
     yearMonth,
     totals: { expenseTotal: 0, incomeTotal: 0, net: 0 },
     recent: [],
     monthItems: [],
+    opening: null,
+    remainder: null,
   };
 }

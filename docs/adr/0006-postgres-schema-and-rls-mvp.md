@@ -1,6 +1,6 @@
 # Postgres schema and RLS for single-user MVP
 
-MVP persists only **committed** domain data in Postgres: **categories**, **expenses**, **incomes**. **Draft** is client-only in-flight state (Commit | Discard)—no `drafts` table. **Monthly total** is live `SUM` on read—no totals table. **Receipt** / **Recording** stay in ephemeral Storage (ADR-0005), not DB rows. Every user table is scoped by `owner_id` with RLS `owner_id = auth.uid()`; seed Categories are **copied per user** on `auth.users` insert (security definer trigger).
+MVP persists only **committed** domain data in Postgres: **categories**, **expenses**, **incomes**, and one **Opening** per user. **Draft** is client-only in-flight state (Commit | Discard)—no `drafts` table. **Monthly total** and **Remainder** are live on read—no totals / remainder table. **Receipt** / **Recording** stay in ephemeral Storage (ADR-0005), not DB rows. Every user table is scoped by `owner_id` with RLS `owner_id = auth.uid()`; seed Categories are **copied per user** on `auth.users` insert (security definer trigger).
 
 ## Tables (shape)
 
@@ -47,10 +47,25 @@ Same money/date/note/timestamps/owner pattern as expenses; **no** `category_id`.
 |-------|--------|
 | `channel` | text CHECK `IN ('voice','manual')` — photo forbidden |
 
+### `openings`
+
+One Opening per user (ADR-0012). Remainder is not stored.
+
+| Column | Notes |
+|--------|--------|
+| `owner_id` | uuid PK → `auth.users` CASCADE (one row per owner) |
+| `amount` | `numeric(12,2)` CHECK `>= 0` (zero allowed; not Expense/Income `> 0`) |
+| `opened_on` | `date` (calendar day; not Expense/Income `occurred_on`; “≤ tomorrow” is app-side, ADR-0004) |
+| `created_at` / `updated_at` | write audit only — not the Remainder axis |
+
+- Owner may SELECT / INSERT / UPDATE. **No DELETE** privilege or policy: unset is out of product.
+- First Set Opening and replacement are the same row.
+
 ### Explicitly absent
 
 - `drafts` / deferred incomplete drafts  
 - `monthly_totals` (or snapshots)  
+- `remainder` / `remainders`  
 - media / receipt / recording tables  
 - unified `transactions` / polymorphic ledger  
 - `currency` column (always BYN)
@@ -66,8 +81,8 @@ History = app `UNION ALL` expenses + incomes ordered by `occurred_on` (and `crea
 
 ## RLS and access
 
-- Enable RLS on all three tables.
-- Policies: SELECT / INSERT / UPDATE / DELETE where `owner_id = auth.uid()` (WITH CHECK same on write).
+- Enable RLS on all four tables.
+- Policies: SELECT / INSERT / UPDATE / DELETE where `owner_id = auth.uid()` (WITH CHECK same on write), except **openings**: SELECT / INSERT / UPDATE only (no DELETE).
 - Reads/writes use **user JWT** (browser or `@supabase/ssr` server client)—not service role for ordinary CRUD.
 - **Service role / security definer**: seed trigger on signup; Storage read/delete + extract path (ADR-0005).
 - Seed integrity flags (`origin`, `is_system_fallback`, `seed_key`): **trust app** in MVP (no extra RLS forbidding client seed inserts); revisit if clients become adversarial.

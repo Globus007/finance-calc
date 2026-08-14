@@ -5,7 +5,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(24);
+select plan(25);
 
 create schema if not exists tests;
 
@@ -81,6 +81,7 @@ $$;
 select has_table('public', 'categories', 'categories table exists');
 select has_table('public', 'expenses', 'expenses table exists');
 select has_table('public', 'incomes', 'incomes table exists');
+select has_table('public', 'openings', 'openings table exists');
 
 select ok(
   not exists (
@@ -90,13 +91,15 @@ select ok(
       and table_name in (
         'drafts',
         'monthly_totals',
+        'remainder',
+        'remainders',
         'media',
         'receipts',
         'recordings',
         'transactions'
       )
   ),
-  'no drafts / monthly_totals / media / transactions tables'
+  'no drafts / monthly_totals / remainder / media / transactions tables'
 );
 
 -- ---------------------------------------------------------------------------
