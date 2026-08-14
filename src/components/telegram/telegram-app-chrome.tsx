@@ -7,6 +7,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { paintTelegramNativeChrome } from "@/lib/telegram/native-chrome";
 
 type TgWebApp = {
   initData?: string;
@@ -39,22 +40,7 @@ export function TelegramAppChrome() {
       // ignore
     }
 
-    const tp = webApp.themeParams ?? {};
-    if (tp.bg_color) {
-      document.documentElement.style.setProperty("--tg-bg", tp.bg_color);
-      try {
-        webApp.setBackgroundColor?.(tp.bg_color);
-      } catch {
-        // ignore
-      }
-    }
-    if (tp.header_bg_color) {
-      try {
-        webApp.setHeaderColor?.(tp.header_bg_color);
-      } catch {
-        // ignore
-      }
-    }
+    paintTelegramNativeChrome(webApp);
 
     const back = webApp.BackButton;
     if (!back) return;

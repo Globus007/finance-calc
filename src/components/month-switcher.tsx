@@ -17,9 +17,9 @@ type Props = {
 };
 
 const navBtnClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[#5B6CFF] shadow-sm shadow-black/5 transition active:scale-95";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-strong text-brand shadow-card transition active:scale-95";
 const navBtnDisabledClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/60 text-[#5B6CFF]/35 shadow-sm shadow-black/5";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-strong/70 text-brand/35";
 
 /**
  * Prev/next month navigation for the Month surface.

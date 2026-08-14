@@ -109,10 +109,7 @@ export function EditRecord({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="px-4 pt-3">
-        <Link
-          href="/history"
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[#5B6CFF]"
-        >
+        <Link href="/history" className="ui-back">
           <IconArrowLeft size={14} /> История
         </Link>
       </div>
@@ -123,22 +120,22 @@ export function EditRecord({
         noValidate
       >
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-2">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          <p className="mt-1 text-xs text-[#1A1B2E]/40">
+          <h1 className="text-[1.55rem] font-bold tracking-[-0.04em]">{title}</h1>
+          <p className="mt-1 text-xs text-ink-muted">
             Способ: {channelLabelRu(record.channel)} · не меняется
           </p>
 
           {error !== null ? (
             <p
               role="alert"
-              className="mt-3 rounded-2xl bg-[#FEF2F2] px-3 py-2 text-sm text-[#B91C1C]"
+              className="mt-3 rounded-control bg-expense-soft px-3 py-2 text-sm text-[#C44822]"
             >
               {error}
             </p>
           ) : null}
 
-          <label className="mt-5 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            Сумма (BYN)
+          <label className="mt-5 block">
+            <span className="ui-kicker">Сумма (BYN)</span>
             <input
               name="amount"
               value={amount}
@@ -148,13 +145,13 @@ export function EditRecord({
               }}
               inputMode="decimal"
               autoComplete="off"
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3.5 text-xl font-bold tabular-nums outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              className="ui-field mt-1.5 text-xl font-bold tabular-nums"
               aria-required
             />
           </label>
 
-          <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            Дата
+          <label className="mt-3 block">
+            <span className="ui-kicker">Дата</span>
             <input
               name="occurredOn"
               type="date"
@@ -163,14 +160,14 @@ export function EditRecord({
                 setError(null);
                 setOccurredOn(e.target.value);
               }}
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              className="ui-field mt-1.5"
               aria-required
             />
           </label>
 
           {record.kind === "expense" ? (
-            <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-              Категория
+            <label className="mt-3 block">
+              <span className="ui-kicker">Категория</span>
               <select
                 name="categoryId"
                 value={categoryId}
@@ -178,7 +175,7 @@ export function EditRecord({
                   setError(null);
                   setCategoryId(e.target.value);
                 }}
-                className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+                className="ui-field mt-1.5"
                 aria-required
               >
                 <option value="">Выберите…</option>
@@ -191,8 +188,8 @@ export function EditRecord({
             </label>
           ) : null}
 
-          <label className="mt-3 block text-[10px] font-bold uppercase tracking-wider text-[#1A1B2E]/40">
-            Заметка
+          <label className="mt-3 block">
+            <span className="ui-kicker">Заметка</span>
             <input
               name="note"
               value={note}
@@ -201,7 +198,7 @@ export function EditRecord({
                 setNote(e.target.value);
               }}
               maxLength={MAX_NOTE_LENGTH}
-              className="mt-1.5 w-full rounded-2xl border-0 bg-white px-4 py-3 text-sm outline-none ring-1 ring-[#1A1B2E]/8 focus:ring-2 focus:ring-[#5B6CFF]"
+              className="ui-field mt-1.5"
             />
           </label>
         </div>
@@ -210,7 +207,7 @@ export function EditRecord({
           <button
             type="submit"
             disabled={!ready || isPending}
-            className="w-full cursor-pointer rounded-2xl bg-gradient-to-r from-[#5B6CFF] to-[#4F46E5] py-4 text-sm font-bold text-white shadow-lg shadow-[#5B6CFF]/35 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-30"
+            className="ui-btn-primary w-full py-3.5"
           >
             {isPending ? "Сохраняем…" : "Сохранить"}
           </button>
@@ -218,7 +215,7 @@ export function EditRecord({
             type="button"
             onClick={onDelete}
             disabled={isPending}
-            className="w-full cursor-pointer rounded-2xl bg-white py-3.5 text-sm font-bold text-[#B91C1C] ring-1 ring-[#FECACA] transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full cursor-pointer rounded-control bg-surface-strong py-3.5 text-sm font-bold text-[#C44822] ring-1 ring-expense/30 transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Удалить
           </button>

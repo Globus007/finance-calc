@@ -21,6 +21,8 @@ describe("MonthlyTotalCard", () => {
     expect(screen.getAllByText(/0,00/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Доходы")).toBeInTheDocument();
     expect(screen.getByText("Расходы")).toBeInTheDocument();
+    expect(screen.getByText("Доходы − расходы за месяц")).toBeInTheDocument();
+    expect(screen.queryByText(/баланс/i)).not.toBeInTheDocument();
   });
 
   it("shows live net as income minus expense", () => {
@@ -32,9 +34,12 @@ describe("MonthlyTotalCard", () => {
     );
 
     expect(screen.getByText("Нетто · август 2026")).toBeInTheDocument();
+    expect(screen.getByText("Доходы − расходы за месяц")).toBeInTheDocument();
+    expect(screen.queryByText(/баланс/i)).not.toBeInTheDocument();
     expect(screen.getByText(/2\s?039,30/)).toBeInTheDocument();
     expect(screen.getByText(/2\s?100,00/)).toBeInTheDocument();
     expect(screen.getByText(/60,70/)).toBeInTheDocument();
+    expect(screen.getByText("плюс")).toBeInTheDocument();
   });
 
   it("marks negative net months as минус when bars are shown", () => {

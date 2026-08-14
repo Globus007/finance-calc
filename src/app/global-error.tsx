@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Honeybadger } from "@honeybadger-io/react";
+import "./globals.css";
 
 /**
  * Global App Router error UI (replaces root layout when it fails).
@@ -21,18 +22,18 @@ export default function GlobalError({
 
   return (
     <html lang="ru">
-      <body className="min-h-full font-sans antialiased">
+      <body className="min-h-full bg-surface font-sans text-ink antialiased">
         <div className="px-4 pb-6 pt-10 text-center">
           <h1 className="text-xl font-bold tracking-tight">
             Что-то пошло не так
           </h1>
-          <p className="mt-2 text-sm text-[#1A1B2E]/55">
+          <p className="mt-2 text-sm text-ink-muted">
             Произошла ошибка. Попробуйте ещё раз.
           </p>
           <button
             type="button"
             onClick={reset}
-            className="mt-6 rounded-full bg-[#5B6CFF] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-[#5B6CFF]/30 transition active:scale-95"
+            className="ui-btn-primary mt-6 w-auto px-5 py-2.5"
           >
             Повторить
           </button>
