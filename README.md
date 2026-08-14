@@ -18,7 +18,7 @@ Media (photo / recording) is ephemeral: after extraction, only draft fields rema
 - **Categories** for expenses (seed + user-defined; hide / unhide / rename rules)
 - **History** of committed expenses and incomes (edit / delete)
 - **Monthly totals** (expense total, income total, net) for calendar months in `Europe/Minsk`
-- **Auth**: email + 6-digit OTP (magic link secondary)
+- **Auth**: email + 6-digit OTP, Google, GitHub, and Discord (magic link secondary)
 - **PWA-oriented** UI (installable; camera/mic need HTTPS)
 
 Domain vocabulary and constraints live in [`CONTEXT.md`](./CONTEXT.md). Architectural decisions are in [`docs/adr/`](./docs/adr/).
@@ -59,7 +59,7 @@ Required env vars (see [`.env.example`](./.env.example) for the full list and au
 
 Optional: model overrides (`VISION_MODEL`, `STT_MODEL`, `TEXT_EXTRACT_MODEL`), Honeybadger keys.
 
-**Supabase Auth** (Dashboard → Authentication → URL Configuration): set Site URL and Redirect URLs for local and production origins. The app is single-user (`shouldCreateUser: false`) — create the user in the dashboard first. Seed categories are applied via DB triggers after user insert (see migrations and ADRs).
+**Supabase Auth** (Dashboard → Authentication → URL Configuration): set Site URL and Redirect URLs for local and production origins. Add `http://localhost:3000/auth/callback` and `https://<production-domain>/auth/callback` to the allowed redirect URLs. In Authentication → Providers, enable Google, GitHub, and/or Discord and enter each provider's client credentials. The provider callback URL used in the Google/GitHub/Discord dashboards is the Supabase callback URL shown in provider settings, usually `https://<project-ref>.supabase.co/auth/v1/callback`. The application callback remains `/auth/callback` and exchanges the PKCE code into the app's cookie session. Email OTP keeps `shouldCreateUser: false`, so email accounts must be pre-provisioned; OAuth providers may create a Supabase user on first sign-in. Seed categories are applied via DB triggers after user insert (see migrations and ADRs).
 
 ```bash
 pnpm dev

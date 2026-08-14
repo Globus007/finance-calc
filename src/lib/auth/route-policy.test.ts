@@ -5,8 +5,9 @@ import {
 } from "./route-policy";
 
 describe("isAuthPublicPath", () => {
-  it("allows login and auth confirm without a session", () => {
+  it("allows login, OAuth callback, and auth confirm without a session", () => {
     expect(isAuthPublicPath("/login")).toBe(true);
+    expect(isAuthPublicPath("/auth/callback")).toBe(true);
     expect(isAuthPublicPath("/auth/confirm")).toBe(true);
   });
 
@@ -37,6 +38,9 @@ describe("resolveAuthRedirect", () => {
     expect(resolveAuthRedirect({ pathname: "/login", hasUser: false })).toBe(
       null,
     );
+    expect(
+      resolveAuthRedirect({ pathname: "/auth/callback", hasUser: false }),
+    ).toBe(null);
     expect(
       resolveAuthRedirect({ pathname: "/auth/confirm", hasUser: false }),
     ).toBe(null);
