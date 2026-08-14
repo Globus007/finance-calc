@@ -1,5 +1,6 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
+import { LOGIN_QUERY_ERROR } from "@/lib/auth/login-query-error";
 import { resolvePostAuthPath } from "@/lib/auth/site-url";
 import { createClient } from "@/lib/supabase/server";
 
@@ -36,6 +37,6 @@ export async function GET(request: NextRequest) {
   }
 
   const login = new URL("/login", origin);
-  login.searchParams.set("error", "auth");
+  login.searchParams.set("error", LOGIN_QUERY_ERROR.auth);
   return NextResponse.redirect(login);
 }

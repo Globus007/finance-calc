@@ -4,10 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { requestLoginOtp, verifyLoginOtp } from "@/app/login/actions";
 import { createClient } from "@/lib/supabase/client";
+import { messageForLoginQueryError } from "@/lib/auth/login-query-error";
 import { isValidEmail, isValidOtpCode, normalizeOtpCode } from "@/lib/auth/otp";
-
-const AUTH_LINK_ERROR =
-  "Не удалось войти по ссылке. Запросите новый код и введите его здесь, в приложении.";
 
 const SENT_INFO =
   "Если этот email зарегистрирован, мы отправили код. Введите 6 цифр из письма — так вход работает и в установленном PWA.";
@@ -23,7 +21,7 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(
-    initialError === "auth" ? AUTH_LINK_ERROR : null,
+    messageForLoginQueryError(initialError),
   );
   const [info, setInfo] = useState<string | null>(null);
   const [oauthProvider, setOauthProvider] = useState<string | null>(null);

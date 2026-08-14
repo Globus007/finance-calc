@@ -15,6 +15,26 @@ afterEach(() => {
   cleanup();
 });
 
+describe("LoginForm query errors", () => {
+  it("does not describe an OAuth callback failure as a magic-link failure", () => {
+    render(<LoginForm initialError="oauth" />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Не удалось войти через провайдера. Попробуйте ещё раз.",
+    );
+    expect(alert).not.toHaveTextContent("Не удалось войти по ссылке");
+  });
+
+  it("keeps the magic-link copy for error=auth", () => {
+    render(<LoginForm initialError="auth" />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Не удалось войти по ссылке. Запросите новый код и введите его здесь, в приложении.",
+    );
+  });
+});
+
 describe("LoginForm viewport chrome", () => {
   it("scrolls inside a viewport-locked pane outside AppShell", () => {
     const { container } = render(<LoginForm />);
