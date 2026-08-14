@@ -3,6 +3,8 @@ import {
   currentYearMonth,
   monthDateBounds,
 } from "@/lib/dates/minsk-month";
+import { computeRemainder } from "@/lib/opening/compute-remainder";
+import type { Opening } from "@/lib/opening/types";
 import { createClient } from "@/lib/supabase/server";
 import type { HistoryItem, MonthlyTotal } from "./history-types";
 import {
@@ -24,6 +26,8 @@ export type HomeMoney = {
   recent: HistoryItem[];
   /** Current-month committed items (for Category breakdown snippet). */
   monthItems: HistoryItem[];
+  opening: Opening | null;
+  remainder: number | null;
 };
 
 export type MonthMoney = {
@@ -33,7 +37,7 @@ export type MonthMoney = {
 };
 
 /**
- * Home: current-month live Monthly total + recent mixed History (committed only).
+ * Home: Remainder (if Opening exists) + current-month totals + recent History.
  */
 export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
   const yearMonth = currentYearMonth();
@@ -47,12 +51,13 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
   }
 
   // Month totals need full month rows; recent needs mixed latest overall.
-  const [monthExpenses, monthIncomes, recentExpenses, recentIncomes] =
+  const [monthExpenses, monthIncomes, recentExpenses, recentIncomes, opening] =
     await Promise.all([
       fetchExpenses(supabase, { start, end }),
       fetchIncomes(supabase, { start, end }),
       fetchExpenses(supabase, { limit: RECENT_LIMIT * 2 }),
       fetchIncomes(supabase, { limit: RECENT_LIMIT * 2 }),
+      fetchOpening(supabase),
     ]);
 
   const monthItems = mergeHistory(monthExpenses, monthIncomes);
@@ -61,11 +66,22 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
     RECENT_LIMIT,
   );
 
+  let remainderItems: HistoryItem[] = [];
+  if (opening) {
+    const [fromOpeningExpenses, fromOpeningIncomes] = await Promise.all([
+      fetchExpenses(supabase, { start: opening.openedOn }),
+      fetchIncomes(supabase, { start: opening.openedOn }),
+    ]);
+    remainderItems = mergeHistory(fromOpeningExpenses, fromOpeningIncomes);
+  }
+
   return {
     yearMonth,
     totals: computeMonthlyTotal(monthItems),
     recent,
     monthItems,
+    opening,
+    remainder: computeRemainder(opening, remainderItems),
   };
 });
 
@@ -173,11 +189,32 @@ async function fetchIncomes(
   return (data as IncomeDbRow[]).map(mapIncomeRow);
 }
 
+async function fetchOpening(supabase: SupabaseServer): Promise<Opening | null> {
+  const { data, error } = await supabase
+    .from("openings")
+    .select("amount, opened_on")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load opening: ${error.message}`);
+  }
+  if (!data) return null;
+
+  const amount =
+    typeof data.amount === "number" ? data.amount : Number(data.amount);
+  return {
+    amount: Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0,
+    openedOn: data.opened_on as string,
+  };
+}
+
 function emptyHome(yearMonth: string): HomeMoney {
   return {
     yearMonth,
     totals: { expenseTotal: 0, incomeTotal: 0, net: 0 },
     recent: [],
     monthItems: [],
+    opening: null,
+    remainder: null,
   };
 }

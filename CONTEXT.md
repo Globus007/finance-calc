@@ -1,6 +1,6 @@
 # Personal finance capture
 
-Single-user personal finance capture: expenses (with draft confirmation), simple income, categories, and monthly totals in BYN.
+Single-user personal finance capture: expenses (with draft confirmation), simple income, categories, monthly totals, and a live Remainder from a dated Opening in BYN.
 
 ## Language
 
@@ -83,4 +83,16 @@ _Avoid_: Feed, ledger, journal, transaction list, separate expense-only or incom
 
 **Monthly total**:
 Aggregated totals for one calendar month over committed Expenses and Incomes whose Occurred on falls in that month: expense total (sum of Expense Amounts), income total (sum of Income Amounts), and net (income total minus expense total). Net is a derived figure on Monthly total, not a separate domain entity. Drafts are excluded. Calendar month and “current month” use fixed Europe/Minsk. Totals are live: Edit or Delete of a committed record recalculates affected months immediately (no month-close snapshot). A month with no committed records is zeros; the current incomplete month uses the same live sum (so far), not a separate partial-month concept.
-_Avoid_: Balance (as the name for this concept), budget, report, statement, rolling total, closed month, snapshot total
+_Avoid_: Balance (as the name for this concept), budget, report, statement, rolling total, closed month, snapshot total, Remainder, Opening
+
+**Opening**:
+The user’s counted cash at the start of one calendar date: a BYN amount (zero allowed, never negative) plus that date. One Opening per user; Set Opening replaces it. Not an Income, not a History row, not a Draft.
+_Avoid_: Balance, starting balance, wallet, account, initial Income, cash journal
+
+**Set Opening**:
+The user action that writes or replaces the single Opening (amount and date). Manual only; not Draft → Commit. After the first write, Opening cannot be cleared.
+_Avoid_: Commit (for this action), save balance, reset, unset, clear Opening
+
+**Remainder**:
+Live cash figure on Home: Opening amount + committed Incomes − committed Expenses whose Occurred on is on or after the Opening date. Absent (not zero) until the first Set Opening. May be negative; does not block Commit. Not persisted; not Monthly total net; not shown on Month or in the bot.
+_Avoid_: Balance, баланс, net, month net, available budget, wallet

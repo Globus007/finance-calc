@@ -2,19 +2,21 @@ import Link from "next/link";
 import { CategoryBreakdown } from "@/components/category-breakdown";
 import { HistoryList } from "@/components/history-list";
 import { IconTags } from "@/components/icons";
-import { MonthlyTotalCard } from "@/components/monthly-total-card";
-import { monthLabelRu } from "@/lib/dates/minsk-month";
+import { RemainderCard } from "@/components/remainder-card";
+import { todayInMinsk, tomorrowInMinsk } from "@/lib/dates/minsk-today";
 import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
 import { loadHomeMoney } from "@/lib/money/load-money";
 
 const HOME_TOP_CATEGORIES = 5;
 
 /**
- * Home: current-month live Monthly total, top expense Categories, recent History.
+ * Home: live Remainder from Opening, current-month tiles, top Categories, recent History.
  */
 export default async function HomePage() {
-  const { yearMonth, totals, recent, monthItems } = await loadHomeMoney();
-  const monthCaption = `Нетто · ${monthLabelRu(yearMonth).toLowerCase()}`;
+  const { totals, recent, monthItems, opening, remainder } =
+    await loadHomeMoney();
+  const today = todayInMinsk();
+  const tomorrow = tomorrowInMinsk();
   const topCategories = computeCategoryBreakdown(monthItems);
 
   return (
@@ -43,7 +45,13 @@ export default async function HomePage() {
       </header>
 
       <div className="mt-5">
-        <MonthlyTotalCard totals={totals} caption={monthCaption} />
+        <RemainderCard
+          remainder={remainder}
+          opening={opening}
+          monthTotals={totals}
+          today={today}
+          tomorrow={tomorrow}
+        />
       </div>
 
       {topCategories.length > 0 ? (
