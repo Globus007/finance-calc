@@ -58,7 +58,7 @@ export default function RootLayout({
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-sans">
+      <body className="h-full overflow-hidden font-sans">
         {/* SPIKE: telegram-feel-demo — official WebApp JS (no-op outside TG). */}
         <Script
           src="https://telegram.org/js/telegram-web-app.js"

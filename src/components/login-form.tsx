@@ -124,134 +124,137 @@ export function LoginForm({ initialError }: { initialError?: string | null }) {
   }
 
   return (
-    <div className="relative mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center overflow-hidden bg-[#F5F7FC] px-5 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))] text-[#172033] md:my-5 md:min-h-[calc(100dvh-2.5rem)] md:rounded-[2rem] md:border md:border-white/80 md:shadow-[0_28px_80px_-32px_rgba(49,46,129,0.38)]">
+    <div className="relative mx-auto h-dvh max-h-dvh w-full max-w-lg overflow-y-auto overscroll-y-contain bg-[#F5F7FC] text-[#172033] md:my-5 md:h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-2.5rem)] md:rounded-[2rem] md:border md:border-white/80 md:shadow-[0_28px_80px_-32px_rgba(49,46,129,0.38)]">
       <div className="pointer-events-none absolute -right-16 top-0 h-64 w-64 rounded-full bg-[#C7D2FE]/70 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-[#CCFBF1]/50 blur-3xl" />
 
-      <div className="relative rounded-[2rem] border border-white/85 bg-white/86 p-6 shadow-[0_24px_54px_-30px_rgba(23,32,51,0.42)] backdrop-blur-xl">
-        <LoginHeader />
+      {/* min-h-full + justify-center lives here so a tall form scrolls from the top. */}
+      <div className="relative flex min-h-full flex-col justify-center px-5 py-10 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
+        <div className="relative rounded-[2rem] border border-white/85 bg-white/86 p-6 shadow-[0_24px_54px_-30px_rgba(23,32,51,0.42)] backdrop-blur-xl">
+          <LoginHeader />
 
-        {step === "email" ? (
-          <>
-            <div className="mt-7 space-y-2.5">
-              <OAuthButton
-                label="Google"
-                provider="google"
-                pendingProvider={oauthProvider}
+          {step === "email" ? (
+            <>
+              <div className="mt-7 space-y-2.5">
+                <OAuthButton
+                  label="Google"
+                  provider="google"
+                  pendingProvider={oauthProvider}
+                  disabled={isPending}
+                  onClick={signInWithProvider}
+                />
+                <OAuthButton
+                  label="GitHub"
+                  provider="github"
+                  pendingProvider={oauthProvider}
+                  disabled={isPending}
+                  onClick={signInWithProvider}
+                />
+                <OAuthButton
+                  label="Discord"
+                  provider="discord"
+                  pendingProvider={oauthProvider}
+                  disabled={isPending}
+                  onClick={signInWithProvider}
+                />
+              </div>
+              <div className="my-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AA4B2]">
+                <span className="h-px flex-1 bg-[#E6EAF2]" />
+                <span>или по email</span>
+                <span className="h-px flex-1 bg-[#E6EAF2]" />
+              </div>
+              <form onSubmit={sendCode} className="space-y-4">
+                <label className="block">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
+                    Email
+                  </span>
+                  <input
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    required
+                    value={email}
+                    onChange={(ev) => setEmail(ev.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-[#E6EAF2] bg-[#F8FAFC] px-4 py-3.5 text-base text-[#172033] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#818CF8] focus:bg-white focus:ring-4 focus:ring-[#E9EAFE]"
+                    placeholder="you@example.com"
+                    disabled={isPending}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isPending ? "Отправляем…" : "Получить код"}
+                </button>
+              </form>
+            </>
+          ) : (
+            <form onSubmit={submitCode} className="mt-7 space-y-4">
+              <p className="rounded-2xl bg-[#EEF2FF] px-3.5 py-3 text-sm leading-relaxed text-[#4F46E5]">
+                Код отправлен на{" "}
+                <span className="font-bold text-[#312E81]">{email}</span>.
+                Введите его <strong>здесь</strong> — так сессия останется в этом
+                приложении, в том числе на домашнем экране.
+              </p>
+              <label className="block">
+                <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
+                  Код из письма
+                </span>
+                <input
+                  type="text"
+                  name="otp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  pattern="[0-9 ]*"
+                  maxLength={8}
+                  required
+                  value={code}
+                  onChange={(ev) => setCode(ev.target.value)}
+                  className="mt-2 w-full rounded-2xl border border-[#E6EAF2] bg-[#F8FAFC] px-4 py-3.5 text-center font-mono text-2xl tracking-[0.35em] text-[#172033] outline-none transition placeholder:text-[#A5B4FC] focus:border-[#818CF8] focus:bg-white focus:ring-4 focus:ring-[#E9EAFE]"
+                  placeholder="••••••"
+                  disabled={isPending}
+                  aria-label="6-значный код"
+                />
+              </label>
+              <button
+                type="submit"
                 disabled={isPending}
-                onClick={signInWithProvider}
-              />
-              <OAuthButton
-                label="GitHub"
-                provider="github"
-                pendingProvider={oauthProvider}
+                className="w-full rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isPending ? "Проверяем…" : "Войти"}
+              </button>
+              <button
+                type="button"
                 disabled={isPending}
-                onClick={signInWithProvider}
-              />
-              <OAuthButton
-                label="Discord"
-                provider="discord"
-                pendingProvider={oauthProvider}
-                disabled={isPending}
-                onClick={signInWithProvider}
-              />
-            </div>
-            <div className="my-6 flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[#9AA4B2]">
-              <span className="h-px flex-1 bg-[#E6EAF2]" />
-              <span>или по email</span>
-              <span className="h-px flex-1 bg-[#E6EAF2]" />
-            </div>
-            <form onSubmit={sendCode} className="space-y-4">
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
-                Email
-              </span>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                value={email}
-                onChange={(ev) => setEmail(ev.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[#E6EAF2] bg-[#F8FAFC] px-4 py-3.5 text-base text-[#172033] outline-none transition placeholder:text-[#9AA4B2] focus:border-[#818CF8] focus:bg-white focus:ring-4 focus:ring-[#E9EAFE]"
-                placeholder="you@example.com"
-                disabled={isPending}
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="w-full rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending ? "Отправляем…" : "Получить код"}
-            </button>
+                onClick={() => {
+                  setStep("email");
+                  setCode("");
+                  setError(null);
+                  setInfo(null);
+                }}
+                className="w-full rounded-xl py-1 text-sm font-bold text-[#4F46E5] transition hover:bg-[#EEF2FF] disabled:opacity-60"
+              >
+                Изменить email / отправить снова
+              </button>
             </form>
-          </>
-        ) : (
-          <form onSubmit={submitCode} className="mt-7 space-y-4">
-            <p className="rounded-2xl bg-[#EEF2FF] px-3.5 py-3 text-sm leading-relaxed text-[#4F46E5]">
-              Код отправлен на{" "}
-              <span className="font-bold text-[#312E81]">{email}</span>.
-              Введите его <strong>здесь</strong> — так сессия останется в этом
-              приложении, в том числе на домашнем экране.
-            </p>
-            <label className="block">
-              <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#697386]">
-                Код из письма
-              </span>
-              <input
-                type="text"
-                name="otp"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                pattern="[0-9 ]*"
-                maxLength={8}
-                required
-                value={code}
-                onChange={(ev) => setCode(ev.target.value)}
-                className="mt-2 w-full rounded-2xl border border-[#E6EAF2] bg-[#F8FAFC] px-4 py-3.5 text-center font-mono text-2xl tracking-[0.35em] text-[#172033] outline-none transition placeholder:text-[#A5B4FC] focus:border-[#818CF8] focus:bg-white focus:ring-4 focus:ring-[#E9EAFE]"
-                placeholder="••••••"
-                disabled={isPending}
-                aria-label="6-значный код"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="w-full rounded-2xl bg-gradient-to-br from-[#6366F1] via-[#4F46E5] to-[#3730A3] px-4 py-3.5 text-sm font-bold text-white shadow-[0_14px_24px_-12px_rgba(79,70,229,0.60)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending ? "Проверяем…" : "Войти"}
-            </button>
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => {
-                setStep("email");
-                setCode("");
-                setError(null);
-                setInfo(null);
-              }}
-              className="w-full rounded-xl py-1 text-sm font-bold text-[#4F46E5] transition hover:bg-[#EEF2FF] disabled:opacity-60"
-            >
-              Изменить email / отправить снова
-            </button>
-          </form>
-        )}
+          )}
 
-        {info ? (
-          <p className="mt-4 rounded-2xl bg-[#DFF8EF] px-3.5 py-3 text-sm leading-relaxed text-[#087E66]" role="status">
-            {info}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="mt-4 rounded-2xl bg-[#FFF0E9] px-3.5 py-3 text-sm leading-relaxed text-[#C44822]" role="alert">
-            {error}
-          </p>
-        ) : null}
+          {info ? (
+            <p className="mt-4 rounded-2xl bg-[#DFF8EF] px-3.5 py-3 text-sm leading-relaxed text-[#087E66]" role="status">
+              {info}
+            </p>
+          ) : null}
+          {error ? (
+            <p className="mt-4 rounded-2xl bg-[#FFF0E9] px-3.5 py-3 text-sm leading-relaxed text-[#C44822]" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );
