@@ -11,4 +11,6 @@ export const honeybadgerConfig = {
   revision:
     process.env.NEXT_PUBLIC_HONEYBADGER_REVISION ||
     process.env.VERCEL_GIT_COMMIT_SHA,
+  // Urban VPN and similar injectors throw into window.onunhandledrejection.
+  ignoreBrowserExtensionErrors: true,
 };

@@ -2,11 +2,12 @@
 
 import { useEffect } from "react";
 import { Honeybadger } from "@honeybadger-io/react";
+import { isServerComponentDigestNotice } from "@/lib/honeybadger/is-server-component-digest-notice";
 import "./globals.css";
 
 /**
  * Global App Router error UI (replaces root layout when it fails).
- * Must render its own <html> / <body>.
+ * Must render its own <html> / <body>. No router — layout is gone.
  * @see https://nextjs.org/docs/app/building-your-application/routing/error-handling#handling-errors-in-root-layouts
  */
 export default function GlobalError({
@@ -17,6 +18,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    if (isServerComponentDigestNotice(error)) return;
     Honeybadger.notify(error);
   }, [error]);
 

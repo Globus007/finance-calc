@@ -6,6 +6,7 @@ import {
 import { remainderFromTotals } from "@/lib/opening/compute-remainder";
 import type { Opening } from "@/lib/opening/types";
 import { createClient } from "@/lib/supabase/server";
+import { userFromGetUserResult } from "@/lib/supabase/session-user";
 import type { HistoryItem, MonthlyTotal } from "./history-types";
 import {
   EXPENSE_HISTORY_SELECT,
@@ -43,9 +44,7 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
   const yearMonth = currentYearMonth();
   const { start, end } = monthDateBounds(yearMonth);
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = userFromGetUserResult(await supabase.auth.getUser());
   if (!user) {
     return emptyHome(yearMonth);
   }
@@ -93,9 +92,7 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
  */
 export const loadHistory = cache(async (): Promise<HistoryItem[]> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = userFromGetUserResult(await supabase.auth.getUser());
   if (!user) return [];
 
   const [expenses, incomes] = await Promise.all([
@@ -112,9 +109,7 @@ export const loadMonthMoney = cache(
   async (yearMonth: string = currentYearMonth()): Promise<MonthMoney> => {
     const { start, end } = monthDateBounds(yearMonth);
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = userFromGetUserResult(await supabase.auth.getUser());
     if (!user) {
       return {
         yearMonth,
