@@ -35,13 +35,21 @@ export default async function HomePage() {
             <p className="mt-0.5 text-[1.05rem] font-bold tracking-[-0.03em]">Финансы</p>
           </div>
         </div>
-        <Link
-          href="/categories"
-          className="flex h-11 w-11 items-center justify-center rounded-control border border-line bg-surface-strong text-brand shadow-card transition hover:bg-brand-soft active:scale-95"
-          aria-label="Категории"
-        >
-          <IconTags size={18} />
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/proposals"
+            className="rounded-control bg-brand-soft px-3 py-2 text-xs font-bold text-brand transition hover:brightness-95 active:scale-95"
+          >
+            КП
+          </Link>
+          <Link
+            href="/categories"
+            className="flex h-11 w-11 items-center justify-center rounded-control border border-line bg-surface-strong text-brand shadow-card transition hover:bg-brand-soft active:scale-95"
+            aria-label="Категории"
+          >
+            <IconTags size={18} />
+          </Link>
+        </div>
       </header>
 
       <div className="mt-5">
