@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-21T12:00:00.000Z",
+  "title": "Design System: Финансы",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "neutral",
+        "displayName": "Body Ink",
+        "canonical": "oklch(19.9% 0.022 292.6)",
+        "tonalRamp": ["oklch(15.0% 0.022 292.6)", "oklch(26.0% 0.022 292.6)", "oklch(38.0% 0.022 292.6)", "oklch(50.0% 0.022 292.6)", "oklch(62.0% 0.022 292.6)", "oklch(74.0% 0.022 292.6)", "oklch(85.0% 0.022 292.6)", "oklch(95.0% 0.022 292.6)"]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Dusty Mauve",
+        "canonical": "oklch(53.2% 0.022 295.5)",
+        "tonalRamp": ["oklch(15.0% 0.022 295.5)", "oklch(26.0% 0.022 295.5)", "oklch(38.0% 0.022 295.5)", "oklch(50.0% 0.022 295.5)", "oklch(62.0% 0.022 295.5)", "oklch(74.0% 0.022 295.5)", "oklch(85.0% 0.022 295.5)", "oklch(95.0% 0.022 295.5)"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Lilac Mist",
+        "canonical": "oklch(93.3% 0.019 302.2)",
+        "tonalRamp": ["oklch(15.0% 0.019 302.2)", "oklch(26.0% 0.019 302.2)", "oklch(38.0% 0.019 302.2)", "oklch(50.0% 0.019 302.2)", "oklch(62.0% 0.019 302.2)", "oklch(74.0% 0.019 302.2)", "oklch(85.0% 0.019 302.2)", "oklch(95.0% 0.019 302.2)"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Lavender Tissue",
+        "canonical": "oklch(95.6% 0.014 308.3)",
+        "tonalRamp": ["oklch(15.0% 0.014 308.3)", "oklch(26.0% 0.014 308.3)", "oklch(38.0% 0.014 308.3)", "oklch(50.0% 0.014 308.3)", "oklch(62.0% 0.014 308.3)", "oklch(74.0% 0.014 308.3)", "oklch(85.0% 0.014 308.3)", "oklch(95.0% 0.014 308.3)"]
+      },
+      "surface-strong": {
+        "role": "neutral",
+        "displayName": "White Envelope",
+        "canonical": "oklch(100.0% 0.000 0)",
+        "tonalRamp": ["oklch(15.0% 0.000 0)", "oklch(26.0% 0.000 0)", "oklch(38.0% 0.000 0)", "oklch(50.0% 0.000 0)", "oklch(62.0% 0.000 0)", "oklch(74.0% 0.000 0)", "oklch(85.0% 0.000 0)", "oklch(95.0% 0.000 0)"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Lavender Hairline",
+        "canonical": "oklch(93.5% 0.016 306.4)",
+        "tonalRamp": ["oklch(15.0% 0.016 306.4)", "oklch(26.0% 0.016 306.4)", "oklch(38.0% 0.016 306.4)", "oklch(50.0% 0.016 306.4)", "oklch(62.0% 0.016 306.4)", "oklch(74.0% 0.016 306.4)", "oklch(85.0% 0.016 306.4)", "oklch(95.0% 0.016 306.4)"]
+      },
+      "brand": {
+        "role": "primary",
+        "displayName": "Periwinkle",
+        "canonical": "oklch(58.2% 0.217 281.8)",
+        "tonalRamp": ["oklch(15.0% 0.217 281.8)", "oklch(26.0% 0.217 281.8)", "oklch(38.0% 0.217 281.8)", "oklch(50.0% 0.217 281.8)", "oklch(62.0% 0.217 281.8)", "oklch(74.0% 0.217 281.8)", "oklch(85.0% 0.217 281.8)", "oklch(95.0% 0.217 281.8)"]
+      },
+      "brand-deep": {
+        "role": "primary",
+        "displayName": "Ink Night",
+        "canonical": "oklch(22.1% 0.016 285.1)",
+        "tonalRamp": ["oklch(15.0% 0.016 285.1)", "oklch(26.0% 0.016 285.1)", "oklch(38.0% 0.016 285.1)", "oklch(50.0% 0.016 285.1)", "oklch(62.0% 0.016 285.1)", "oklch(74.0% 0.016 285.1)", "oklch(85.0% 0.016 285.1)", "oklch(95.0% 0.016 285.1)"]
+      },
+      "brand-soft": {
+        "role": "primary",
+        "displayName": "Lilac Whisper",
+        "canonical": "oklch(94.1% 0.031 293.8)",
+        "tonalRamp": ["oklch(15.0% 0.031 293.8)", "oklch(26.0% 0.031 293.8)", "oklch(38.0% 0.031 293.8)", "oklch(50.0% 0.031 293.8)", "oklch(62.0% 0.031 293.8)", "oklch(74.0% 0.031 293.8)", "oklch(85.0% 0.031 293.8)", "oklch(95.0% 0.031 293.8)"]
+      },
+      "positive": {
+        "role": "secondary",
+        "displayName": "Till Green",
+        "canonical": "oklch(60.9% 0.130 160.5)",
+        "tonalRamp": ["oklch(15.0% 0.130 160.5)", "oklch(26.0% 0.130 160.5)", "oklch(38.0% 0.130 160.5)", "oklch(50.0% 0.130 160.5)", "oklch(62.0% 0.130 160.5)", "oklch(74.0% 0.130 160.5)", "oklch(85.0% 0.130 160.5)", "oklch(95.0% 0.130 160.5)"]
+      },
+      "positive-soft": {
+        "role": "secondary",
+        "displayName": "Till Wash",
+        "canonical": "oklch(96.0% 0.023 165.9)",
+        "tonalRamp": ["oklch(15.0% 0.023 165.9)", "oklch(26.0% 0.023 165.9)", "oklch(38.0% 0.023 165.9)", "oklch(50.0% 0.023 165.9)", "oklch(62.0% 0.023 165.9)", "oklch(74.0% 0.023 165.9)", "oklch(85.0% 0.023 165.9)", "oklch(95.0% 0.023 165.9)"]
+      },
+      "expense": {
+        "role": "tertiary",
+        "displayName": "Coral Debit",
+        "canonical": "oklch(61.4% 0.191 23.1)",
+        "tonalRamp": ["oklch(15.0% 0.191 23.1)", "oklch(26.0% 0.191 23.1)", "oklch(38.0% 0.191 23.1)", "oklch(50.0% 0.191 23.1)", "oklch(62.0% 0.191 23.1)", "oklch(74.0% 0.191 23.1)", "oklch(85.0% 0.191 23.1)", "oklch(95.0% 0.191 23.1)"]
+      },
+      "expense-soft": {
+        "role": "tertiary",
+        "displayName": "Coral Wash",
+        "canonical": "oklch(94.8% 0.023 17.6)",
+        "tonalRamp": ["oklch(15.0% 0.023 17.6)", "oklch(26.0% 0.023 17.6)", "oklch(38.0% 0.023 17.6)", "oklch(50.0% 0.023 17.6)", "oklch(62.0% 0.023 17.6)", "oklch(74.0% 0.023 17.6)", "oklch(85.0% 0.023 17.6)", "oklch(95.0% 0.023 17.6)"]
+      },
+      "hero": {
+        "role": "primary",
+        "displayName": "Ink Night Well",
+        "canonical": "oklch(22.1% 0.016 285.1)",
+        "tonalRamp": ["oklch(15.0% 0.016 285.1)", "oklch(26.0% 0.016 285.1)", "oklch(38.0% 0.016 285.1)", "oklch(50.0% 0.016 285.1)", "oklch(62.0% 0.016 285.1)", "oklch(74.0% 0.016 285.1)", "oklch(85.0% 0.016 285.1)", "oklch(95.0% 0.016 285.1)"]
+      },
+      "hero-caption": {
+        "role": "neutral",
+        "displayName": "Dusk Caption",
+        "canonical": "oklch(84.8% 0.032 297.6)",
+        "tonalRamp": ["oklch(15.0% 0.032 297.6)", "oklch(26.0% 0.032 297.6)", "oklch(38.0% 0.032 297.6)", "oklch(50.0% 0.032 297.6)", "oklch(62.0% 0.032 297.6)", "oklch(74.0% 0.032 297.6)", "oklch(85.0% 0.032 297.6)", "oklch(95.0% 0.032 297.6)"]
+      },
+      "income-bright": {
+        "role": "secondary",
+        "displayName": "Mint Bright",
+        "canonical": "oklch(91.0% 0.093 180.4)",
+        "tonalRamp": ["oklch(15.0% 0.093 180.4)", "oklch(26.0% 0.093 180.4)", "oklch(38.0% 0.093 180.4)", "oklch(50.0% 0.093 180.4)", "oklch(62.0% 0.093 180.4)", "oklch(74.0% 0.093 180.4)", "oklch(85.0% 0.093 180.4)", "oklch(95.0% 0.093 180.4)"]
+      },
+      "expense-bright": {
+        "role": "tertiary",
+        "displayName": "Peach Bright",
+        "canonical": "oklch(90.1% 0.073 70.7)",
+        "tonalRamp": ["oklch(15.0% 0.073 70.7)", "oklch(26.0% 0.073 70.7)", "oklch(38.0% 0.073 70.7)", "oklch(50.0% 0.073 70.7)", "oklch(62.0% 0.073 70.7)", "oklch(74.0% 0.073 70.7)", "oklch(85.0% 0.073 70.7)", "oklch(95.0% 0.073 70.7)"]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Burnt Error",
+        "canonical": "oklch(56.6% 0.166 36.9)",
+        "tonalRamp": ["oklch(15.0% 0.166 36.9)", "oklch(26.0% 0.166 36.9)", "oklch(38.0% 0.166 36.9)", "oklch(50.0% 0.166 36.9)", "oklch(62.0% 0.166 36.9)", "oklch(74.0% 0.166 36.9)", "oklch(85.0% 0.166 36.9)", "oklch(95.0% 0.166 36.9)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Remainder and monthly net. Tabular, tight, one figure at a time." },
+      "headline": { "displayName": "Headline", "purpose": "Screen titles such as Итог месяца, История, confirm headings." },
+      "title": { "displayName": "Title", "purpose": "Wordmark Финансы and section heads inside envelopes." },
+      "body": { "displayName": "Body", "purpose": "UI copy, history titles, helper text in the pocket column." },
+      "label": { "displayName": "Kicker", "purpose": "Uppercase field names and Новая операция. Not nav labels." }
+    },
+    "shadows": [
+      { "name": "envelope", "value": "0 10px 28px -18px rgb(22 20 31 / 0.45)", "purpose": "White cards, month tiles, header icon buttons." },
+      { "name": "hero-well", "value": "0 22px 40px -22px rgb(22 20 31 / 0.55)", "purpose": "Monthly net card and confirm amount well." },
+      { "name": "dock", "value": "0 14px 32px -18px rgb(22 20 31 / 0.38)", "purpose": "Floating capture cluster." },
+      { "name": "commit-pill", "value": "0 12px 24px -14px rgb(26 26 34 / 0.65)", "purpose": "Primary button lift." },
+      { "name": "mic", "value": "0 12px 22px -10px rgba(26, 26, 34, 0.7)", "purpose": "Center voice capture control." },
+      { "name": "desktop-frame", "value": "0 32px 80px -36px rgb(22 20 31 / 0.45)", "purpose": "Phone shell on md and up." }
+    ],
+    "motion": [
+      { "name": "ease-commit", "value": "filter 180ms ease, transform 160ms ease", "purpose": "Primary button hover brightness and press scale." },
+      { "name": "ease-nav", "value": "300ms ease-out", "purpose": "Dock tab color and transform." },
+      { "name": "nav-tab-arrive", "value": "320ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Active nav icon well settle." },
+      { "name": "press-scale", "value": "scale(0.99)", "purpose": "Default active press on pills and rows; dock uses 0.95." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ink Night pill for commit actions: save, sign in, get code.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Сохранить</button>",
+      "css": ".ds-btn-primary { cursor: pointer; width: 100%; border: none; border-radius: 999px; background: var(--brand-deep, #1a1a22); padding: 0.85rem 1rem; font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; color: #fff; box-shadow: 0 12px 24px -14px rgb(26 26 34 / 0.65); transition: filter 180ms ease, transform 160ms ease; } .ds-btn-primary:hover { filter: brightness(1.05); } .ds-btn-primary:active { transform: scale(0.99); } .ds-btn-primary:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; } .ds-btn-primary:disabled { cursor: not-allowed; opacity: 0.38; }"
+    },
+    {
+      "name": "OAuth Button",
+      "kind": "button",
+      "refersTo": "button-oauth",
+      "description": "White squircle secondary for Google / GitHub / Discord.",
+      "html": "<button class=\"ds-btn-oauth\" type=\"button\">Войти через Google</button>",
+      "css": ".ds-btn-oauth { cursor: pointer; width: 100%; border: 1px solid var(--line, #ece7f2); border-radius: 1.15rem; background: var(--surface-strong, #ffffff); padding: 0.875rem 1rem; font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; color: var(--ink, #16141f); transition: border-color 160ms ease, background 160ms ease, transform 160ms ease; } .ds-btn-oauth:hover { border-color: var(--brand-soft, #ece8ff); background: var(--surface, #f3eef8); } .ds-btn-oauth:active { transform: scale(0.99); } .ds-btn-oauth:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Lavender tissue field with Periwinkle focus halo.",
+      "html": "<label class=\"ds-field-label\"><span class=\"ds-kicker\">Email</span><input class=\"ds-field\" type=\"email\" placeholder=\"you@example.com\" /></label>",
+      "css": ".ds-field-label { display: block; font-family: Manrope, system-ui, sans-serif; } .ds-kicker { display: block; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-muted, #6d6a78); } .ds-field { display: block; width: 100%; margin-top: 0.5rem; border: 1px solid var(--line, #ece7f2); background: var(--surface, #f3eef8); border-radius: 1.15rem; padding: 0.75rem 1rem; color: var(--ink, #16141f); font-family: Manrope, system-ui, sans-serif; font-size: 0.875rem; font-weight: 400; outline: none; } .ds-field:focus { border-color: color-mix(in srgb, #6d5ef5 55%, white); background: var(--surface-strong, #ffffff); box-shadow: 0 0 0 4px var(--brand-soft, #ece8ff); } .ds-field:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; } .ds-field::placeholder { color: var(--ink-muted, #6d6a78); }"
+    },
+    {
+      "name": "Envelope Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White paper envelope for lists, login, and filters.",
+      "html": "<section class=\"ds-card\"><h2 class=\"ds-card-title\">История</h2><p class=\"ds-card-body\">Пока нет записей. Добавьте расход или доход через панель захвата.</p></section>",
+      "css": ".ds-card { border: 1px solid color-mix(in srgb, var(--line, #ece7f2) 88%, white); background: var(--surface-strong, #ffffff); border-radius: 1.25rem; box-shadow: 0 10px 28px -18px rgb(22 20 31 / 0.45); padding: 1rem; font-family: Manrope, system-ui, sans-serif; color: var(--ink, #16141f); } .ds-card-title { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.03em; } .ds-card-body { margin: 0.75rem 0 0; font-size: 0.875rem; line-height: 1.55; color: var(--ink-muted, #6d6a78); text-align: center; }"
+    },
+    {
+      "name": "Hero Amount Well",
+      "kind": "custom",
+      "refersTo": "hero-well",
+      "description": "Ink Night well for monthly net and confirm amount.",
+      "html": "<section class=\"ds-hero\"><p class=\"ds-hero-caption\">Нетто</p><p class=\"ds-hero-figure\">2 139,30 Br</p><p class=\"ds-hero-sub\">Доходы − расходы за месяц</p></section>",
+      "css": ".ds-hero { position: relative; overflow: hidden; border-radius: 1.75rem; background: var(--hero, #1a1a22); padding: 1.25rem; color: #fff; box-shadow: 0 22px 40px -22px rgb(22 20 31 / 0.55); font-family: Manrope, system-ui, sans-serif; } .ds-hero::before { content: \"\"; position: absolute; right: -3.5rem; top: -4rem; width: 11rem; height: 11rem; border-radius: 999px; background: color-mix(in srgb, #6d5ef5 35%, transparent); filter: blur(48px); } .ds-hero-caption, .ds-hero-figure, .ds-hero-sub { position: relative; margin: 0; } .ds-hero-caption { font-size: 13px; font-weight: 500; color: var(--hero-caption, #cfc9e0); } .ds-hero-figure { margin-top: 0.5rem; font-size: 2.2rem; font-weight: 700; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; } .ds-hero-sub { margin-top: 0.625rem; font-size: 13px; font-weight: 500; color: rgb(255 255 255 / 0.72); }"
+    },
+    {
+      "name": "Category Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Unselected paper chip and Periwinkle selected chip.",
+      "html": "<div class=\"ds-chip-row\"><button class=\"ds-chip\" type=\"button\">Продукты</button><button class=\"ds-chip ds-chip-selected\" type=\"button\">Прочее</button></div>",
+      "css": ".ds-chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-chip { cursor: pointer; border: 1px solid var(--line, #ece7f2); border-radius: 999px; background: var(--surface-strong, #ffffff); padding: 0.5rem 0.875rem; font-family: Manrope, system-ui, sans-serif; font-size: 0.75rem; font-weight: 600; color: var(--ink-muted, #6d6a78); transition: border-color 160ms ease, background 160ms ease, transform 120ms ease; } .ds-chip:hover { border-color: var(--brand-soft, #ece8ff); background: #fff; } .ds-chip:active { transform: scale(0.98); } .ds-chip:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; } .ds-chip-selected { border-color: transparent; background: var(--brand, #6d5ef5); color: #fff; box-shadow: 0 8px 16px -12px rgba(79, 70, 229, 0.55); }"
+    },
+    {
+      "name": "History Row",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Mixed history row with semantic glyph well and tabular amount.",
+      "html": "<a class=\"ds-row\" href=\"#\"><span class=\"ds-row-glyph ds-row-glyph-expense\" aria-hidden=\"true\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"7\" y1=\"17\" x2=\"17\" y2=\"7\" /><polyline points=\"7 7 17 7 17 17\" /></svg></span><span class=\"ds-row-copy\"><span class=\"ds-row-title\">Продукты</span><span class=\"ds-row-meta\">14 авг. · фото</span></span><span class=\"ds-row-amount\">−45,20 Br</span></a>",
+      "css": ".ds-row { display: flex; align-items: center; gap: 0.625rem; width: 100%; padding: 0.625rem 0.125rem; border-radius: 1rem; text-decoration: none; font-family: Manrope, system-ui, sans-serif; color: var(--ink, #16141f); } .ds-row:hover { background: #f7f4fb; } .ds-row:active { transform: scale(0.99); } .ds-row:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; } .ds-row-glyph { display: flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 0.85rem; flex-shrink: 0; } .ds-row-glyph-expense { background: var(--expense-soft, #fde8e8); color: var(--expense, #e0454a); } .ds-row-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; } .ds-row-title { font-size: 0.875rem; font-weight: 600; letter-spacing: -0.01em; } .ds-row-meta { margin-top: 0.125rem; font-size: 11px; color: var(--ink-muted, #6d6a78); } .ds-row-amount { font-size: 13px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Capture Dock",
+      "kind": "nav",
+      "refersTo": "button-primary",
+      "description": "Floating white cluster: photo, Ink Night mic, manual.",
+      "html": "<div class=\"ds-dock\" role=\"group\" aria-label=\"Добавить операцию\"><button class=\"ds-dock-side\" type=\"button\" aria-label=\"Фото чека\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z\" /><circle cx=\"12\" cy=\"13\" r=\"4\" /></svg></button><button class=\"ds-dock-mic\" type=\"button\" aria-label=\"Голосовая запись\"><svg width=\"25\" height=\"25\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z\" /><path d=\"M19 10v2a7 7 0 0 1-14 0v-2\" /><line x1=\"12\" y1=\"19\" x2=\"12\" y2=\"23\" /><line x1=\"8\" y1=\"23\" x2=\"16\" y2=\"23\" /></svg></button><button class=\"ds-dock-side\" type=\"button\" aria-label=\"Вручную\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 20h9\" /><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z\" /></svg></button></div>",
+      "css": ".ds-dock { display: inline-flex; align-items: center; gap: 0.25rem; border-radius: 999px; background: #fff; padding: 0.375rem; box-shadow: 0 14px 32px -18px rgb(22 20 31 / 0.38); } .ds-dock-side { display: flex; align-items: center; justify-content: center; width: 2.75rem; height: 2.75rem; border: none; border-radius: 999px; background: #f4f1f8; color: var(--ink, #16141f); cursor: pointer; transition: background 160ms ease, transform 160ms ease; } .ds-dock-side:hover { background: #ece8f3; } .ds-dock-side:active { transform: scale(0.95); } .ds-dock-side:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; } .ds-dock-mic { display: flex; align-items: center; justify-content: center; width: 3.5rem; height: 3.5rem; border: none; border-radius: 999px; background: var(--ink, #16141f); color: #fff; cursor: pointer; box-shadow: 0 12px 22px -10px rgba(26, 26, 34, 0.7); transition: filter 160ms ease, transform 160ms ease; } .ds-dock-mic:hover { filter: brightness(1.1); } .ds-dock-mic:active { transform: scale(0.95); } .ds-dock-mic:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; }"
+    },
+    {
+      "name": "Nav Tab",
+      "kind": "nav",
+      "refersTo": "nav-tab-active",
+      "description": "Dock destination tab; active well is deep plum, not Periwinkle.",
+      "html": "<a class=\"ds-tab\" href=\"#\" aria-current=\"page\"><span class=\"ds-tab-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 10.5 12 3l9 7.5\" /><path d=\"M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5\" /></svg></span><span class=\"ds-tab-label\">Домой</span></a>",
+      "css": ".ds-tab { display: inline-flex; flex-direction: column; align-items: center; gap: 0.125rem; padding: 0.375rem 0; text-decoration: none; font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 600; color: var(--ink, #16141f); } .ds-tab-icon { display: flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem; border-radius: 0.9rem; background: #2a2348; color: #fff; } .ds-tab-label { color: var(--ink, #16141f); } .ds-tab:focus-visible { outline: 3px solid color-mix(in srgb, #6d5ef5 42%, white); outline-offset: 3px; border-radius: 0.75rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Watercolor Till",
+    "overview": "The product is a pocket till on watercolor paper. Cash on hand — Remainder — sits as ink on a dusk wash of lilac, peach, and mint. Lists and tools live in white envelopes that rest on that wash, not in a gray application chrome. Capture is a physical gesture: a floating charcoal microphone, camera and pen beside it, committed with a charcoal pill. The atmosphere is warm and personal; the hierarchy is the number.\n\nDensity is mobile-first and unhurried. One narrow column, generous card radii, short Russian labels, and a single large figure at a time. Brand personality is soft and capture-first, not analytical. The shipping look already lives in the same watercolor-dusk family as the bound Dribbble look-reference; it does not import that reference’s AI-chat IA, GBP, named fictional user, or assistant chrome.\n\nConfirmed visual rejections: a cold fintech dashboard; neon accents painted across a whole screen; Periwinkle as the primary button fill; glassmorphism stacks; a dark-mode shell.",
+    "keyCharacteristics": [
+      "Watercolor dusk canvas (lilac, peach, mint washes) inside a pocket-width column",
+      "Ink Night remainder as the hero figure; white envelopes for lists and tools",
+      "Periwinkle as brand voice and focus, never as the commit fill",
+      "Soft envelopes (1.25–1.75rem) and charcoal pills for commitment",
+      "Hybrid depth: paper layers plus ambient lift",
+      "Manrope everywhere; Geist Mono only for the six-digit OTP"
+    ],
+    "rules": [
+      { "name": "The Two Inks Rule", "body": "Ink Night speaks with action and number. Periwinkle speaks with brand voice and focus. Do not fill the primary CTA with Periwinkle.", "section": "colors" },
+      { "name": "The Tabular Remainder Rule", "body": "Money is always `tabular-nums`, bold, and tightly tracked. Never set an amount in a proportional, light, or decorative face.", "section": "typography" },
+      { "name": "The Pocket Column Rule", "body": "New screens inherit the 32rem column and the framed-phone desktop. Do not grow into a wide app grid.", "section": "layout" },
+      { "name": "The Paper-On-Watercolor Rule", "body": "Surfaces are white envelopes or Ink Night wells on the dusk wash. Do not introduce a gray app background, a heavy drop-shadow stack, or a glass pane as the default layer.", "section": "elevation" },
+      { "name": "The Soft Envelope Rule", "body": "If it holds content, it is an envelope (1.25–1.75rem) or a pill. Sharp corners and hairline-only cards are out of world.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do keep Remainder as ink on watercolor, not inside a white card.",
+      "Do fill primary commit actions and the mic with Ink Night (`brand-deep`).",
+      "Do set money in Manrope 700 tabular-nums with tight tracking.",
+      "Do use Periwinkle for kickers, focus, selected chips, and back links.",
+      "Do place new list content in a white 1.75rem envelope with the envelope shadow.",
+      "Do keep desktop as a framed 32rem phone on Lilac Mist."
+    ],
+    "donts": [
+      "Don't fill the primary CTA with Periwinkle.",
+      "Don't import the look-reference’s AI chat, GBP, “Money AI”, or assistant orb as product UI.",
+      "Don't introduce a wide dashboard, sidebar, or multi-column desktop shell.",
+      "Don't use sharp 4–8px radii or charcoal hairlines as the card language.",
+      "Don't render Remainder as 0,00 before Set Opening — absence is empty, not zero.",
+      "Don't set UI copy in English on product surfaces; the interface is Russian.",
+      "Don't use Geist Mono outside the OTP field."
+    ]
+  }
+}
