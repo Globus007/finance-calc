@@ -30,23 +30,25 @@ export function BottomNav() {
 
   return (
     <nav
-      className="relative z-20 border-t border-line bg-surface-strong/92 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-dock backdrop-blur-xl"
+      className="relative z-20 bg-transparent px-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-1"
       aria-label="Основная навигация"
       // Hide dock chrome under full-screen capture so confirm is uncluttered.
       hidden={isCaptureOpen}
     >
-      <div className="mx-auto grid max-w-lg grid-cols-[1fr_auto_1fr] items-end gap-2">
-        <NavTab href="/" active={onHome} label="Домой" icon={HOME_ICON} />
+      <div className="mx-auto flex w-full min-w-0 max-w-lg items-end gap-1">
+        <div className="flex min-w-0 flex-1 justify-center">
+          <NavTab href="/" active={onHome} label="Домой" icon={HOME_ICON} />
+        </div>
 
         <div
-          className="-mt-9 flex items-center gap-1 rounded-[1.35rem] border border-line bg-surface-strong p-1.5 shadow-card"
+          className="-mt-7 flex shrink-0 items-center gap-1 rounded-full bg-white p-1.5 shadow-dock"
           role="group"
           aria-label="Добавить операцию"
         >
           <button
             type="button"
             onClick={openPhoto}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[0.95rem] bg-expense-soft text-expense transition hover:brightness-95 active:scale-95"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-[#f4f1f8] text-ink transition hover:bg-[#ece8f3] active:scale-95"
             aria-label="Фото чека"
           >
             {CAMERA_ICON}
@@ -54,8 +56,7 @@ export function BottomNav() {
           <button
             type="button"
             onClick={openVoice}
-            className="relative flex h-14 w-14 cursor-pointer items-center justify-center overflow-hidden rounded-[1.05rem] text-white shadow-[0_12px_22px_-8px_rgba(79,70,229,0.62)] transition hover:brightness-105 active:scale-95"
-            style={{ background: "var(--brand-fill)" }}
+            className="relative flex h-14 w-14 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-ink text-white shadow-[0_12px_22px_-10px_rgba(26,26,34,0.7)] transition hover:brightness-110 active:scale-95"
             aria-label="Голосовая запись"
           >
             {MIC_ICON}
@@ -63,14 +64,16 @@ export function BottomNav() {
           <button
             type="button"
             onClick={openManual}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-[0.95rem] bg-brand-soft text-brand transition hover:brightness-95 active:scale-95"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full bg-[#f4f1f8] text-ink transition hover:bg-[#ece8f3] active:scale-95"
             aria-label="Вручную"
           >
             {PEN_ICON}
           </button>
         </div>
 
-        <NavTab href="/month" active={onMonth} label="Месяц" icon={CHART_ICON} />
+        <div className="flex min-w-0 flex-1 justify-center">
+          <NavTab href="/month" active={onMonth} label="Месяц" icon={CHART_ICON} />
+        </div>
       </div>
     </nav>
   );
@@ -90,18 +93,16 @@ function NavTab({
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold transition-[color,transform] duration-300 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 ${
-        active
-          ? "text-brand"
-          : "text-ink-muted hover:text-ink"
+      className={`flex min-w-0 flex-col items-center gap-0.5 rounded-2xl py-1.5 text-[10px] font-semibold transition-[color,transform] duration-300 ease-out active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 ${
+        active ? "text-ink" : "text-ink-muted hover:text-ink"
       }`}
       aria-current={active ? "page" : undefined}
     >
       <span
-        className={`nav-tab-icon flex h-8 w-8 items-center justify-center rounded-xl transition-[background-color,box-shadow,transform] duration-300 ease-out ${
+        className={`nav-tab-icon flex h-9 w-9 items-center justify-center rounded-[0.9rem] transition-[background-color,color,transform] duration-300 ease-out ${
           active
-            ? "nav-tab-icon-active bg-brand-soft shadow-[0_6px_14px_-12px_rgba(79,70,229,0.48)]"
-            : ""
+            ? "nav-tab-icon-active bg-[#2a2348] text-white"
+            : "text-ink"
         }`}
       >
         {icon}
@@ -109,10 +110,6 @@ function NavTab({
       <span className={`nav-tab-label ${active ? "nav-tab-label-active" : ""}`}>
         {label}
       </span>
-      <span
-        aria-hidden
-        className={`nav-tab-indicator ${active ? "nav-tab-indicator-active" : ""}`}
-      />
     </Link>
   );
 }

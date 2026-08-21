@@ -25,8 +25,6 @@ export type HomeMoney = {
   yearMonth: string;
   totals: MonthlyTotal;
   recent: HistoryItem[];
-  /** Current-month committed items (for Category breakdown snippet). */
-  monthItems: HistoryItem[];
   opening: Opening | null;
   remainder: number | null;
 };
@@ -81,7 +79,6 @@ export const loadHomeMoney = cache(async (): Promise<HomeMoney> => {
     yearMonth,
     totals: computeMonthlyTotal(monthItems),
     recent,
-    monthItems,
     opening,
     remainder,
   };
@@ -237,7 +234,6 @@ function emptyHome(yearMonth: string): HomeMoney {
     yearMonth,
     totals: { expenseTotal: 0, incomeTotal: 0, net: 0 },
     recent: [],
-    monthItems: [],
     opening: null,
     remainder: null,
   };
