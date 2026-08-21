@@ -28,15 +28,18 @@ export function CategoryBreakdown({
     limit != null && limit > 0 ? rows.slice(0, limit) : rows;
 
   return (
-    <section aria-label={title}>
+    <section
+      className="min-w-0 rounded-[1.75rem] bg-white px-4 pb-4 pt-4 shadow-card"
+      aria-label={title}
+    >
       {!hideTitle && (
-        <h2 className="ui-title">{title}</h2>
+        <h2 className="text-[1.05rem] font-bold tracking-[-0.03em]">{title}</h2>
       )}
 
       {visible.length === 0 ? (
         <p className="ui-empty">{emptyMessage}</p>
       ) : (
-        <ul className="mt-2.5 space-y-2">
+        <ul className="mt-1">
           {visible.map((row) => (
             <CategoryBreakdownRowItem
               key={row.categoryDisplayName}
@@ -54,29 +57,25 @@ function CategoryBreakdownRowItem({ row }: { row: CategoryBreakdownRow }) {
   const barWidth = Math.max(row.shareOfExpenseTotal * 100, 2);
 
   return (
-    <li className="ui-card px-3.5 py-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="min-w-0 truncate text-sm font-semibold tracking-[-0.01em] text-ink">
-          {row.categoryDisplayName}
-        </p>
-        <div className="shrink-0 text-right">
-          <p className="text-sm font-bold tracking-[-0.02em] tabular-nums text-expense">
-            −{formatByn(row.amount)}
-          </p>
-          <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-ink-muted">
-            {formatSharePercent(pct)}
-          </p>
-        </div>
-      </div>
+    <li className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-0.5 py-3">
+      <p className="min-w-0 truncate text-sm font-semibold tracking-[-0.01em] text-ink">
+        {row.categoryDisplayName}
+      </p>
+      <p className="text-right text-[13px] font-bold tracking-[-0.025em] tabular-nums text-expense">
+        −{formatByn(row.amount)}
+      </p>
       <div
-        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-ink/[0.06]"
+        className="h-1.5 min-w-0 overflow-hidden rounded-full bg-expense-soft"
         aria-hidden
       >
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#FB923C] to-[#E66B43] transition-all"
+          className="h-full rounded-full bg-expense"
           style={{ width: `${barWidth}%` }}
         />
       </div>
+      <p className="text-right text-[11px] font-medium tabular-nums text-ink-muted">
+        {formatSharePercent(pct)}
+      </p>
     </li>
   );
 }

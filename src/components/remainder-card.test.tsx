@@ -78,6 +78,29 @@ describe("RemainderCard", () => {
     expect(screen.queryByText(/баланс/i)).not.toBeInTheDocument();
   });
 
+  it("shows the exact month totals, including grouped digits, kopecks, and Br", () => {
+    render(
+      <RemainderCard
+        remainder={100}
+        opening={{ amount: 100, openedOn: "2026-08-10" }}
+        monthTotals={{
+          incomeTotal: 1_234_567.89,
+          expenseTotal: 9_876_543.21,
+          net: 1_234_567.89 - 9_876_543.21,
+        }}
+        today="2026-08-14"
+        tomorrow="2026-08-15"
+      />,
+    );
+
+    const income = screen.getByLabelText("Доходы за месяц");
+    const expense = screen.getByLabelText("Расходы за месяц");
+    expect(income).toHaveTextContent(/\+1\s?234\s?567,89\s?Br/);
+    expect(expense).toHaveTextContent(/−9\s?876\s?543,21\s?Br/);
+    expect(income.querySelector(".truncate")).toBeNull();
+    expect(expense.querySelector(".truncate")).toBeNull();
+  });
+
   it("lets the user open Set Opening again when Opening already exists", async () => {
     const user = userEvent.setup();
     render(

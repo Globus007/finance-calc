@@ -17,9 +17,9 @@ type Props = {
 };
 
 const navBtnClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-strong text-brand shadow-card transition active:scale-95";
+  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-brand transition hover:bg-surface active:scale-95 motion-reduce:active:scale-100";
 const navBtnDisabledClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-surface-strong/70 text-brand/35";
+  "flex h-11 w-11 shrink-0 cursor-not-allowed items-center justify-center rounded-full text-ink-muted/55";
 
 /**
  * Prev/next month navigation for the Month surface.
@@ -37,8 +37,8 @@ export function MonthSwitcher({
 
   return (
     <nav
-      className="mt-3 flex items-center justify-between gap-2"
-      aria-label="Выбор месяца"
+      className="mt-4 flex items-center gap-1 rounded-full bg-white p-1 shadow-card"
+      aria-label={`Выбор месяца, ${label}`}
     >
       <Link
         href={`/month?ym=${prevYm}`}
@@ -49,7 +49,7 @@ export function MonthSwitcher({
       </Link>
 
       <p
-        className="min-w-0 truncate text-center text-sm font-semibold tracking-tight"
+        className="min-w-0 flex-1 truncate text-center text-[15px] font-bold tracking-[-0.03em]"
         aria-live="polite"
       >
         {label}
