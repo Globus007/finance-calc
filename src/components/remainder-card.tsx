@@ -246,32 +246,47 @@ function MonthTile({
   const income = tone === "income";
   return (
     <div
-      className="flex min-w-0 items-center gap-2 rounded-[1.25rem] bg-white px-2.5 py-2.5 shadow-card"
+      className="flex min-w-0 flex-col gap-1.5 rounded-[1.25rem] bg-white px-2.5 py-2.5 shadow-card"
       aria-label={label}
     >
-      <span
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-          income ? "bg-positive-soft text-positive" : "bg-expense-soft text-expense"
-        }`}
-        aria-hidden
-      >
-        {income ? (
-          <IconArrowDownLeft size={15} />
-        ) : (
-          <IconArrowUpRight size={15} />
-        )}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-ink-muted">{shortLabel}</p>
-        <p
-          className={`mt-0.5 truncate text-[13px] font-bold tabular-nums ${
-            income ? "text-positive" : "text-expense"
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+            income ? "bg-positive-soft text-positive" : "bg-expense-soft text-expense"
           }`}
+          aria-hidden
         >
-          {value}
+          {income ? (
+            <IconArrowDownLeft size={15} />
+          ) : (
+            <IconArrowUpRight size={15} />
+          )}
+        </span>
+        <p className="min-w-0 text-[11px] font-medium text-ink-muted">
+          {shortLabel}
         </p>
       </div>
+      <p
+        className={`min-w-0 wrap-anywhere text-[13px] font-bold leading-snug tracking-[-0.03em] tabular-nums ${
+          income ? "text-positive" : "text-expense"
+        }`}
+      >
+        <MonthAmountValue value={value} />
+      </p>
     </div>
+  );
+}
+
+/** formatByn is one NBSP run; offer a wrap before Br, then mid-figure if needed. */
+function MonthAmountValue({ value }: { value: string }) {
+  const suffix = "\u00a0Br";
+  if (!value.endsWith(suffix)) return value;
+  return (
+    <>
+      {value.slice(0, -suffix.length)}
+      <wbr />
+      {suffix}
+    </>
   );
 }
 
