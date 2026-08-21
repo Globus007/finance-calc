@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Manrope } from "next/font/google";
 import Script from "next/script";
 import { HoneybadgerProvider } from "@/components/honeybadger-provider";
 import { TelegramAppChrome } from "@/components/telegram/telegram-app-chrome";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin", "cyrillic"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -45,7 +46,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#f5f7fc",
+  themeColor: "#ebe6f4",
 };
 
 export default function RootLayout({
@@ -56,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden font-sans">
         {/* SPIKE: telegram-feel-demo — official WebApp JS (no-op outside TG). */}

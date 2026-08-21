@@ -7,12 +7,9 @@ import { BottomNav } from "./bottom-nav";
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <CaptureProvider>
-      <div className="app-frame relative mx-auto flex h-dvh max-h-dvh w-full max-w-lg flex-col overflow-hidden bg-surface text-ink pt-[env(safe-area-inset-top)] md:my-5 md:h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-2.5rem)]">
-        <div className="pointer-events-none absolute -right-16 -top-24 -z-0 h-64 w-64 rounded-full bg-[#C7D2FE]/45 blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-40 bg-gradient-to-b from-white/70 to-transparent" />
-
+      <div className="app-frame relative mx-auto flex h-dvh max-h-dvh w-full max-w-lg flex-col overflow-hidden text-ink pt-[env(safe-area-inset-top)] md:my-5 md:h-[calc(100dvh-2.5rem)] md:max-h-[calc(100dvh-2.5rem)]">
         {/* min-h-0: flex item must shrink so this pane scrolls, not the dock. */}
-        <main className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+        <main className="relative z-10 min-h-0 w-full min-w-0 flex-1 overflow-y-auto overscroll-y-contain">
           {children}
         </main>
         <BottomNav />

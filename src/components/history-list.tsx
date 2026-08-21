@@ -28,7 +28,7 @@ export function HistoryList({
   }
 
   return (
-    <ul className="mt-2.5 space-y-2" aria-label="История">
+    <ul className="mt-2.5 min-w-0 space-y-2" aria-label="История">
       {items.map((item) => (
         <HistoryRow key={`${item.kind}-${item.id}`} item={item} />
       ))}
@@ -56,7 +56,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
       <Link
         href={href}
         aria-label={a11yLabel}
-        className="ui-row group flex items-center gap-3 px-3 py-2.5 transition hover:border-brand-soft active:scale-[0.99]"
+        className="ui-row group flex w-full min-w-0 items-center gap-2.5 px-0.5 py-2.5 transition hover:bg-[#f7f4fb] active:scale-[0.99]"
       >
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.85rem] ${
@@ -79,7 +79,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
           </p>
         </div>
         <p
-          className={`shrink-0 text-sm font-bold tracking-[-0.025em] tabular-nums ${
+          className={`shrink-0 text-[13px] font-bold tracking-[-0.025em] tabular-nums ${
             isIncome ? "text-positive" : "text-ink"
           }`}
         >
