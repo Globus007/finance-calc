@@ -15,7 +15,7 @@ describe("MonthlyTotalCard", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Итог месяца")).toBeInTheDocument();
+    expect(screen.getByLabelText("Нетто")).toBeInTheDocument();
     expect(screen.getByText("пусто")).toBeInTheDocument();
     // Three zero figures: net + income + expense (with +/− prefix on sides)
     expect(screen.getAllByText(/0,00/).length).toBeGreaterThanOrEqual(1);
@@ -23,6 +23,9 @@ describe("MonthlyTotalCard", () => {
     expect(screen.getByText("Расходы")).toBeInTheDocument();
     expect(screen.getByText("Доходы − расходы за месяц")).toBeInTheDocument();
     expect(screen.queryByText(/баланс/i)).not.toBeInTheDocument();
+    // Empty months must not draw stub comparison bars.
+    expect(screen.getAllByText("Доходы")).toHaveLength(1);
+    expect(screen.getAllByText("Расходы")).toHaveLength(1);
   });
 
   it("shows live net as income minus expense", () => {
