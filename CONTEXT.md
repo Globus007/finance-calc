@@ -41,8 +41,16 @@ The user action that reverses Hide so the Category is available again for picker
 _Avoid_: Restore, re-enable, unarchive (as the domain verb)
 
 **Amount**:
-The monetary value of an Expense or Income, always in BYN. On commit it must be greater than zero.
+The monetary value of an Expense or Income, stored canonically in BYN and driving all aggregates. It may be typed in another Currency on manual capture or Edit; at Commit (and again at Edit-save) the typed amount is converted once to BYN at the effective Fx rate, and the original currency, original amount, and rate are kept as a snapshot alongside. On commit it must be greater than zero (the limit applies to the amount as typed).
 _Avoid_: Sum, total (for a single record), value, price
+
+**Currency**:
+The currency the user types an Amount in: BYN (default) or USD. Offered only on manual capture and Edit; voice/photo/bot capture stays BYN-only this iteration, as does Opening. The choice lives on the in-flight Draft and affects nothing until Commit.
+_Avoid_: Multi-currency account, wallet, denomination, base currency
+
+**Fx rate**:
+The single effective USD→BYN rate used for all dollar conversions: the official NBRB rate fetched lazily at most once per day and cached, optionally overridden by the user from Settings (with one-tap reset). The rate is fixed onto each committed record at Commit/Edit-save; historical figures never re-convert when rates move. Every converted display value is approximate («≈»).
+_Avoid_: Exchange history, rate chart, live quote, conversion-on-read
 
 **Occurred on**:
 The calendar date the Expense or Income is attributed to (when the money moved for tracking purposes), not the moment it was committed. Product “today” (e.g. default when capture omits a date) is the calendar date in Europe/Minsk, not the device timezone.

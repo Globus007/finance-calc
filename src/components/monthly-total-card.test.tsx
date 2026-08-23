@@ -55,3 +55,32 @@ describe("MonthlyTotalCard", () => {
     expect(screen.getByText("минус")).toBeInTheDocument();
   });
 });
+
+describe("MonthlyTotalCard secondary ≈ $ lines (ADR-0013)", () => {
+  const totals = { expenseTotal: 60.7, incomeTotal: 2100, net: 2039.3 };
+
+  it("renders ready-made secondary strings under net and both tiles", () => {
+    render(
+      <MonthlyTotalCard
+        totals={totals}
+        caption="Нетто"
+        showBars
+        secondary={{
+          net: "≈ $2 039",
+          income: "≈ $2 100",
+          expense: "≈ $61",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("≈ $2 039")).toBeInTheDocument();
+    expect(screen.getByText("≈ $2 100")).toBeInTheDocument();
+    expect(screen.getByText("≈ $61")).toBeInTheDocument();
+  });
+
+  it("renders no secondary lines without a rate", () => {
+    render(<MonthlyTotalCard totals={totals} caption="Нетто" showBars />);
+
+    expect(screen.queryByText(/≈/)).not.toBeInTheDocument();
+  });
+});

@@ -68,3 +68,26 @@ describe("HistoryList", () => {
     ).toHaveAttribute("href", "/history/income/i1");
   });
 });
+
+describe("HistoryList USD badge (ADR-0013)", () => {
+  it("shows the original $ amount and rate for records entered in USD", () => {
+    render(
+      <HistoryList
+        items={[
+          expense({
+            amount: 165,
+            usd: { originalAmount: 50, fxRate: 3.3012 },
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/\$50 · по 3,30/)).toBeInTheDocument();
+  });
+
+  it("shows no badge for native BYN records", () => {
+    render(<HistoryList items={[expense()]} />);
+
+    expect(screen.queryByText(/· по /)).not.toBeInTheDocument();
+  });
+});

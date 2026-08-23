@@ -16,5 +16,6 @@ export function createManualDraft(
     occurredOn: todayInMinsk(at),
     categoryId: "",
     note: "",
+    currency: "BYN",
   };
 }

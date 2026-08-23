@@ -7,7 +7,9 @@ import type {
 } from "@/lib/money/error-messages";
 import type { HistoryKind } from "@/lib/money/history-types";
 import type { Draft } from "@/lib/draft/types";
+import type { DraftCurrency } from "@/lib/draft/types";
 import { validateCommit } from "@/lib/draft/validate-commit";
+import { getEffectiveRate } from "@/lib/fx";
 import { createClient } from "@/lib/supabase/server";
 
 export type EditRecordResult =
@@ -29,6 +31,8 @@ export type EditRecordInput = {
   occurredOn: string;
   categoryId: string;
   note: string;
+  /** Typed currency; anything but USD is treated as BYN (server trust boundary). */
+  currency?: DraftCurrency;
 };
 
 function revalidateMoneySurfaces() {
@@ -73,16 +77,41 @@ export async function editCommittedRecord(
     occurredOn: input.occurredOn,
     categoryId: input.categoryId,
     note: input.note,
+    // Server trust boundary: only explicit USD counts as USD.
+    currency: input.currency === "USD" ? "USD" : "BYN",
   };
 
-  // async-defer-await: pure validation before auth / DB I/O
-  const validation = validateCommit(draft);
-  if (!validation.ok) {
-    return { status: "error", reason: validation.reason };
+  // async-defer-await: pure shape validation before auth / DB I/O
+  const shapeCheck = validateCommit(draft);
+  if (!shapeCheck.ok && shapeCheck.reason !== "currency_rate_unavailable") {
+    return { status: "error", reason: shapeCheck.reason };
   }
 
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
+
+  // Rate resolved server-side only when the save involves USD (ADR-0013):
+  // an Edit of a $ record recomputes BYN at the rate effective now.
+  let fx: { rate: number } | null = null;
+  if (draft.currency === "USD") {
+    const effective = await getEffectiveRate();
+    if (!effective) {
+      return { status: "error", reason: "currency_rate_unavailable" };
+    }
+    fx = { rate: effective.rate };
+  }
+
+  const validation = validateCommit(draft, fx);
+  if (!validation.ok) {
+    return { status: "error", reason: validation.reason };
+  }
+
+  const snapshotColumns = {
+    currency: validation.currency,
+    original_amount:
+      validation.currency === "USD" ? validation.originalAmount : null,
+    fx_rate: validation.fxRate,
+  };
 
   if (input.kind === "expense") {
     const categoryId = validation.categoryId as string;
@@ -120,6 +149,7 @@ export async function editCommittedRecord(
       .from("expenses")
       .update({
         amount: validation.amount,
+        ...snapshotColumns,
         occurred_on: validation.occurredOn,
         category_id: categoryId,
         note: validation.note,
@@ -152,6 +182,7 @@ export async function editCommittedRecord(
     .from("incomes")
     .update({
       amount: validation.amount,
+      ...snapshotColumns,
       occurred_on: validation.occurredOn,
       note: validation.note,
     })

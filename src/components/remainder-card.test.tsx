@@ -119,3 +119,34 @@ describe("RemainderCard", () => {
     expect(screen.getByLabelText("Дата старта")).toBeInTheDocument();
   });
 });
+
+describe("RemainderCard USD secondary line (ADR-0013)", () => {
+  it("shows the ready-made ≈ $ line under the Remainder figure", () => {
+    render(
+      <RemainderCard
+        remainder={2139.3}
+        opening={{ amount: 100, openedOn: "2026-08-10" }}
+        monthTotals={monthTotals}
+        today="2026-08-14"
+        tomorrow="2026-08-15"
+        usdRemainder="≈ $2 139"
+      />,
+    );
+
+    expect(screen.getByText("≈ $2 139")).toBeInTheDocument();
+  });
+
+  it("shows no ≈ $ line when no rate was passed", () => {
+    render(
+      <RemainderCard
+        remainder={2139.3}
+        opening={{ amount: 100, openedOn: "2026-08-10" }}
+        monthTotals={monthTotals}
+        today="2026-08-14"
+        tomorrow="2026-08-15"
+      />,
+    );
+
+    expect(screen.queryByText(/≈/)).not.toBeInTheDocument();
+  });
+});

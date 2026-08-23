@@ -1,5 +1,9 @@
 import type { CategoryPickerItem } from "@/lib/categories/types";
-import type { HistoryChannel, HistoryKind } from "./history-types";
+import type {
+  HistoryChannel,
+  HistoryKind,
+  UsdSnapshot,
+} from "./history-types";
 
 /**
  * Committed Expense or Income loaded for Edit (not a Draft).
@@ -9,6 +13,8 @@ export type EditableRecord = {
   id: string;
   kind: HistoryKind;
   amount: number;
+  /** Present when the record was entered in USD (prefills $ chip + typed amount). */
+  usd?: UsdSnapshot | null;
   /** YYYY-MM-DD */
   occurredOn: string;
   /** Expense Category id; null for Income. */

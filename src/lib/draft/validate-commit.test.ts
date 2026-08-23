@@ -31,6 +31,9 @@ describe("validateCommit", () => {
     expect(validateCommit(expense())).toEqual({
       ok: true,
       amount: 10,
+      originalAmount: 10,
+      currency: "BYN",
+      fxRate: null,
       occurredOn: "2026-08-05",
       categoryId: "cat-1",
       note: null,
@@ -41,6 +44,9 @@ describe("validateCommit", () => {
     expect(validateCommit(income())).toEqual({
       ok: true,
       amount: 100,
+      originalAmount: 100,
+      currency: "BYN",
+      fxRate: null,
       occurredOn: "2026-08-05",
       categoryId: null,
       note: "зарплата",
@@ -117,5 +123,85 @@ describe("validateCommit", () => {
   it("canCommit mirrors validation ok", () => {
     expect(canCommit(expense())).toBe(true);
     expect(canCommit(expense({ amount: "" }))).toBe(false);
+  });
+});
+
+describe("validateCommit with currency (ADR-0013)", () => {
+  it.each([
+    ["10", 3.3012, 33.01],
+    ["50", 3.3, 165],
+    ["0.01", 3.3012, 0.03],
+    // Half-up at the canonical 2 dp boundary (same rule as parseAmount).
+    ["1.005", 1, 1.01],
+  ])(
+    "converts typed %j USD at rate %j to canonical BYN %j half-up",
+    (typed, rate, canonical) => {
+      const result = validateCommit(
+        expense({ amount: typed, currency: "USD" }),
+        { rate },
+      );
+      expect(result).toEqual({
+        ok: true,
+        amount: canonical,
+        // Typed amount is parsed (and rounded) by the shared amount parser.
+        originalAmount: Math.round(Number(`${typed}e2`)) / 100,
+        currency: "USD",
+        fxRate: rate,
+        occurredOn: "2026-08-05",
+        categoryId: "cat-1",
+        note: null,
+      });
+    },
+  );
+
+  it("keeps the original amount and works for Income too", () => {
+    const result = validateCommit(
+      income({ amount: "50", currency: "USD" }),
+      { rate: 3.35 },
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      amount: 167.5,
+      originalAmount: 50,
+      currency: "USD",
+      fxRate: 3.35,
+    });
+  });
+
+  it("checks the column limit against the amount as typed", () => {
+    expect(
+      validateCommit(
+        expense({ amount: "10000000000", currency: "USD" }),
+        { rate: 3.3 },
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "amount_too_large",
+    });
+  });
+
+  it("rejects USD when no effective rate is available", () => {
+    expect(validateCommit(expense({ currency: "USD" }))).toEqual({
+      ok: false,
+      reason: "currency_rate_unavailable",
+    });
+    expect(validateCommit(expense({ currency: "USD" }), { rate: -1 })).toEqual({
+      ok: false,
+      reason: "currency_rate_unavailable",
+    });
+  });
+
+  it("ignores an injected rate for BYN drafts", () => {
+    expect(validateCommit(income(), { rate: 3.3 })).toMatchObject({
+      currency: "BYN",
+      fxRate: null,
+      amount: 100,
+      originalAmount: 100,
+    });
+  });
+
+  it("canCommit stays enabled for USD without a resolved rate (server decides)", () => {
+    expect(canCommit(expense({ currency: "USD" }))).toBe(true);
+    expect(canCommit(expense({ currency: "USD", amount: "" }))).toBe(false);
   });
 });

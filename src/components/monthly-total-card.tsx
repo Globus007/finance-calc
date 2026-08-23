@@ -7,6 +7,12 @@ type Props = {
   caption?: string;
   /** Show simple income/expense bars (Month tab). */
   showBars?: boolean;
+  /** Ready-made "≈ $N" lines; null when no effective rate (ADR-0013). */
+  secondary?: {
+    net: string;
+    income: string;
+    expense: string;
+  } | null;
 };
 
 /**
@@ -17,6 +23,7 @@ export function MonthlyTotalCard({
   totals,
   caption = "Нетто · текущий месяц",
   showBars = false,
+  secondary = null,
 }: Props) {
   const { expenseTotal, incomeTotal, net } = totals;
   const empty = expenseTotal === 0 && incomeTotal === 0;
@@ -54,6 +61,11 @@ export function MonthlyTotalCard({
           {net < 0 ? "−" : ""}
           {formatByn(Math.abs(net))}
         </p>
+        {secondary ? (
+          <p className="mt-1 text-[12px] font-medium tabular-nums text-white/60">
+            {secondary.net}
+          </p>
+        ) : null}
         <p className="mt-2.5 text-[13px] font-medium leading-snug text-white/72">
           Доходы − расходы за месяц
         </p>
@@ -86,8 +98,18 @@ export function MonthlyTotalCard({
           showBars && !empty ? "mt-3.5" : "mt-5"
         }`}
       >
-        <MetricTile label="Доходы" value={`+${formatByn(incomeTotal)}`} tone="income" />
-        <MetricTile label="Расходы" value={`−${formatByn(expenseTotal)}`} tone="expense" />
+        <MetricTile
+          label="Доходы"
+          value={`+${formatByn(incomeTotal)}`}
+          usd={secondary?.income ?? null}
+          tone="income"
+        />
+        <MetricTile
+          label="Расходы"
+          value={`−${formatByn(expenseTotal)}`}
+          usd={secondary?.expense ?? null}
+          tone="expense"
+        />
       </div>
     </section>
   );
@@ -96,10 +118,12 @@ export function MonthlyTotalCard({
 function MetricTile({
   label,
   value,
+  usd,
   tone,
 }: {
   label: string;
   value: string;
+  usd: string | null;
   tone: "income" | "expense";
 }) {
   return (
@@ -114,6 +138,11 @@ function MetricTile({
       >
         {value}
       </p>
+      {usd ? (
+        <p className="mt-0.5 text-[11px] font-medium tabular-nums text-white/55">
+          {usd}
+        </p>
+      ) : null}
     </div>
   );
 }

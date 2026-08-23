@@ -9,7 +9,9 @@ import { sortCategoriesForManage } from "@/lib/categories/sort-categories";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import type { CommitActionError } from "@/lib/draft/error-messages";
 import type { CaptureChannel, Draft, RecordKind } from "@/lib/draft/types";
+import type { DraftCurrency } from "@/lib/draft/types";
 import { validateCommit } from "@/lib/draft/validate-commit";
+import { getEffectiveRate } from "@/lib/fx";
 import { createClient } from "@/lib/supabase/server";
 
 export type CommitDraftResult =
@@ -31,6 +33,8 @@ export type CommitDraftInput = {
   occurredOn: string;
   categoryId: string;
   note: string;
+  /** Typed currency; anything but USD is treated as BYN (server trust boundary). */
+  currency?: DraftCurrency;
 };
 
 function revalidateMoneySurfaces() {
@@ -118,16 +122,43 @@ async function commitWithChannel(
     occurredOn: input.occurredOn,
     categoryId: input.categoryId,
     note: input.note,
+    // Server trust boundary: only explicit USD counts as USD.
+    currency: input.currency === "USD" ? "USD" : "BYN",
   };
 
-  // async-defer-await: pure validation before auth / DB I/O
-  const validation = validateCommit(draft);
-  if (!validation.ok) {
-    return { status: "error", reason: validation.reason };
+  // async-defer-await: pure shape validation before auth / DB I/O
+  const shapeCheck = validateCommit(draft);
+  if (
+    !shapeCheck.ok &&
+    shapeCheck.reason !== "currency_rate_unavailable"
+  ) {
+    return { status: "error", reason: shapeCheck.reason };
   }
 
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
+
+  // Rate resolved server-side only when the commit involves USD (ADR-0013).
+  let fx: { rate: number } | null = null;
+  if (draft.currency === "USD") {
+    const effective = await getEffectiveRate();
+    if (!effective) {
+      return { status: "error", reason: "currency_rate_unavailable" };
+    }
+    fx = { rate: effective.rate };
+  }
+
+  const validation = validateCommit(draft, fx);
+  if (!validation.ok) {
+    return { status: "error", reason: validation.reason };
+  }
+
+  const snapshotColumns = {
+    currency: validation.currency,
+    original_amount:
+      validation.currency === "USD" ? validation.originalAmount : null,
+    fx_rate: validation.fxRate,
+  };
 
   if (draft.kind === "expense") {
     const categoryId = validation.categoryId as string;
@@ -149,6 +180,7 @@ async function commitWithChannel(
       .insert({
         owner_id: user.id,
         amount: validation.amount,
+        ...snapshotColumns,
         occurred_on: validation.occurredOn,
         category_id: categoryId,
         note: validation.note,
@@ -180,6 +212,7 @@ async function commitWithChannel(
     .insert({
       owner_id: user.id,
       amount: validation.amount,
+      ...snapshotColumns,
       occurred_on: validation.occurredOn,
       note: validation.note,
       channel,

@@ -25,6 +25,7 @@ export function forceExpenseDraft(
     occurredOn: draft.occurredOn,
     categoryId: systemFallbackCategoryId,
     note: draft.note,
+    currency: draft.currency,
   };
 }
 

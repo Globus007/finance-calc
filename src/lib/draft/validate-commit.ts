@@ -1,10 +1,11 @@
 import { parseAmount } from "./parse-amount";
 import { isNoteTooLong, normalizeNote } from "./normalize-note";
-import type { Draft } from "./types";
+import type { Draft, DraftCurrency } from "./types";
 
 export type CommitRejection =
   | "amount_required"
   | "amount_too_large"
+  | "currency_rate_unavailable"
   | "date_required"
   | "category_required"
   | "note_too_long"
@@ -13,7 +14,13 @@ export type CommitRejection =
 export type CommitValidation =
   | {
       ok: true;
+      /** Canonical BYN amount for storage and all aggregates. */
       amount: number;
+      /** Amount exactly as typed (USD drafts keep the typed figure). */
+      originalAmount: number;
+      currency: DraftCurrency;
+      /** Rate used for USD→BYN; null for native-BYN rows. */
+      fxRate: number | null;
       occurredOn: string;
       categoryId: string | null;
       note: string | null;
@@ -42,14 +49,26 @@ export function isValidCalendarDate(iso: string): boolean {
   );
 }
 
+/** Half-up rounding to 2 dp via string exponent (same rule as parseAmount). */
+export function roundHalfUp2(value: number): number {
+  return Math.round(Number(`${value}e2`)) / 100;
+}
+
+/** Injected effective rate — resolved server-side, never fetched here (ADR-0013). */
+export type CommitFx = { rate: number };
+
 /**
- * Commit minimum validity (ADR-0003):
+ * Commit minimum validity (ADR-0003 + ADR-0013):
  * - Expense: Amount > 0 + Occurred on + Category
  * - Income: Amount > 0 + Occurred on
  * Channel is not user-edited; photo forbidden for Income.
- * Amount must fit numeric(12,2); Occurred on must be a real calendar day.
+ * Limits apply to the amount as typed; a USD draft converts to canonical BYN
+ * half-up at the injected rate, fixed once at Commit/Edit-save.
  */
-export function validateCommit(draft: Draft): CommitValidation {
+export function validateCommit(
+  draft: Draft,
+  fx?: CommitFx | null,
+): CommitValidation {
   if (draft.kind === "income" && draft.channel === "photo") {
     return { ok: false, reason: "invalid_channel_for_kind" };
   }
@@ -66,6 +85,18 @@ export function validateCommit(draft: Draft): CommitValidation {
     return { ok: false, reason: "amount_too_large" };
   }
 
+  const currency: DraftCurrency = draft.currency ?? "BYN";
+  let canonical = amount;
+  let fxRate: number | null = null;
+  if (currency === "USD") {
+    const rate = fx?.rate;
+    if (rate == null || !Number.isFinite(rate) || rate <= 0) {
+      return { ok: false, reason: "currency_rate_unavailable" };
+    }
+    canonical = roundHalfUp2(amount * rate);
+    fxRate = rate;
+  }
+
   const occurredOn = draft.occurredOn.trim();
   if (!occurredOn || !isValidCalendarDate(occurredOn)) {
     return { ok: false, reason: "date_required" };
@@ -78,7 +109,10 @@ export function validateCommit(draft: Draft): CommitValidation {
     }
     return {
       ok: true,
-      amount,
+      amount: canonical,
+      originalAmount: amount,
+      currency,
+      fxRate,
       occurredOn,
       categoryId,
       note: normalizeNote(draft.note),
@@ -87,14 +121,22 @@ export function validateCommit(draft: Draft): CommitValidation {
 
   return {
     ok: true,
-    amount,
+    amount: canonical,
+    originalAmount: amount,
+    currency,
+    fxRate,
     occurredOn,
     categoryId: null,
     note: normalizeNote(draft.note),
   };
 }
 
-/** Whether the confirm Commit control may be enabled. */
+/**
+ * Whether the confirm Commit control may be enabled. The rate is resolved
+ * server-side at Commit time, so a missing rate must not disable the button;
+ * the server rejects with an actionable message when USD has no rate.
+ */
 export function canCommit(draft: Draft): boolean {
-  return validateCommit(draft).ok;
+  const validation = validateCommit(draft);
+  return validation.ok || validation.reason === "currency_rate_unavailable";
 }

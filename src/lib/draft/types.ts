@@ -4,6 +4,9 @@ export type RecordKind = "expense" | "income";
 
 export type CaptureChannel = "photo" | "voice" | "manual";
 
+/** Currency the Amount was typed in. Only manual capture / Edit offers USD (ADR-0013). */
+export type DraftCurrency = "BYN" | "USD";
+
 /**
  * Prospective single Expense or Income held on confirm.
  * Channel is system-set and not a form field.
@@ -19,4 +22,6 @@ export type Draft = {
   /** Expense only; empty until user picks (manual) or extract maps. */
   categoryId: string;
   note: string;
+  /** Typed currency of `amount`; absent = BYN (extraction/bot stay BYN-only, ADR-0013). */
+  currency?: DraftCurrency;
 };

@@ -1,4 +1,8 @@
-import type { HistoryChannel, HistoryItem } from "./history-types";
+import type {
+  HistoryChannel,
+  HistoryItem,
+  UsdSnapshot,
+} from "./history-types";
 
 /** Supabase `expenses` row (+ optional joined category name). */
 export type ExpenseDbRow = {
@@ -9,6 +13,9 @@ export type ExpenseDbRow = {
   channel: string;
   created_at: string;
   category_id: string;
+  currency?: string | null;
+  original_amount?: string | number | null;
+  fx_rate?: string | number | null;
   categories:
     | { display_name: string }
     | { display_name: string }[]
@@ -23,19 +30,23 @@ export type IncomeDbRow = {
   note: string | null;
   channel: string;
   created_at: string;
+  currency?: string | null;
+  original_amount?: string | number | null;
+  fx_rate?: string | number | null;
 };
 
 export const EXPENSE_HISTORY_SELECT =
-  "id, amount, occurred_on, note, channel, created_at, category_id, categories(display_name)" as const;
+  "id, amount, occurred_on, note, channel, created_at, category_id, currency, original_amount, fx_rate, categories(display_name)" as const;
 
 export const INCOME_HISTORY_SELECT =
-  "id, amount, occurred_on, note, channel, created_at" as const;
+  "id, amount, occurred_on, note, channel, created_at, currency, original_amount, fx_rate" as const;
 
 export function mapExpenseRow(row: ExpenseDbRow): HistoryItem {
   return {
     id: row.id,
     kind: "expense",
     amount: parseNumeric(row.amount),
+    usd: mapUsd(row),
     occurredOn: row.occurred_on,
     createdAt: row.created_at,
     categoryId: row.category_id,
@@ -50,6 +61,7 @@ export function mapIncomeRow(row: IncomeDbRow): HistoryItem {
     id: row.id,
     kind: "income",
     amount: parseNumeric(row.amount),
+    usd: mapUsd(row),
     occurredOn: row.occurred_on,
     createdAt: row.created_at,
     categoryId: null,
@@ -65,6 +77,27 @@ function parseChannel(
 ): HistoryChannel {
   if (raw === "photo" || raw === "voice" || raw === "manual") return raw;
   return fallback;
+}
+
+/** Old rows read as BYN: absent/null snapshot columns mean native BYN. */
+function mapUsd(row: {
+  currency?: string | null;
+  original_amount?: string | number | null;
+  fx_rate?: string | number | null;
+}): UsdSnapshot | null {
+  if (row.currency !== "USD") return null;
+  if (row.original_amount == null || row.fx_rate == null) return null;
+  const originalAmount = parseNumeric(row.original_amount);
+  // Rates keep four fraction digits (numeric(12,4)) — never round to 2.
+  const fxRate = parseRate(row.fx_rate);
+  if (originalAmount <= 0 || fxRate <= 0) return null;
+  return { originalAmount, fxRate };
+}
+
+function parseRate(value: string | number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Number(`${n}e4`)) / 10_000;
 }
 
 function parseNumeric(value: string | number): number {
