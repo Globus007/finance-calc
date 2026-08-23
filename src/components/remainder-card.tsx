@@ -22,6 +22,8 @@ type Props = {
   monthTotals: MonthlyTotal;
   today: string;
   tomorrow: string;
+  /** Ready-made "≈ $N" secondary line; null when no effective rate (ADR-0013). */
+  usdRemainder?: string | null;
   /** Injectable for tests; defaults to the Set Opening server action. */
   setOpeningFn?: (input: SetOpeningInput) => Promise<SetOpeningResult>;
 };
@@ -36,6 +38,7 @@ export function RemainderCard({
   monthTotals,
   today,
   tomorrow,
+  usdRemainder = null,
   setOpeningFn = setOpening,
 }: Props) {
   const router = useRouter();
@@ -73,6 +76,7 @@ export function RemainderCard({
           <PresentRemainder
             remainder={remainder}
             opening={opening}
+            usdRemainder={usdRemainder}
             editing={editing}
             onEdit={() => {
               setError(null);
@@ -189,12 +193,14 @@ function EmptyRemainderPrompt() {
 function PresentRemainder({
   remainder,
   opening,
+  usdRemainder,
   editing,
   onEdit,
   onCancel,
 }: {
   remainder: number;
   opening: Opening | null;
+  usdRemainder: string | null;
   editing: boolean;
   onEdit: () => void;
   onCancel: () => void;
@@ -206,6 +212,11 @@ function PresentRemainder({
         {remainder < 0 ? "−" : ""}
         {formatByn(Math.abs(remainder))}
       </p>
+      {usdRemainder ? (
+        <p className="mt-1.5 text-[13px] font-medium tabular-nums text-ink-muted">
+          {usdRemainder}
+        </p>
+      ) : null}
       <p className="mt-2.5 text-[13px] font-medium text-ink-muted">
         {opening
           ? `Старт ${formatByn(opening.amount)} · с ${formatOpeningDate(opening.openedOn)}`

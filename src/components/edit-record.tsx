@@ -11,8 +11,9 @@ import {
   type EditRecordResult,
 } from "@/app/(app)/history/actions";
 import { IconArrowLeft } from "@/components/icons";
+import { CurrencyChips } from "@/components/capture/confirm-draft";
 import type { CategoryPickerItem } from "@/lib/categories/types";
-import type { Draft } from "@/lib/draft/types";
+import type { Draft, DraftCurrency } from "@/lib/draft/types";
 import { MAX_NOTE_LENGTH } from "@/lib/draft/normalize-note";
 import { canCommit } from "@/lib/draft/validate-commit";
 import {
@@ -34,6 +35,16 @@ type Props = {
   ) => Promise<DeleteRecordResult>;
 };
 
+/** Initial typed amount text: USD records edit the figure they remember. */
+function initialAmount(record: EditableRecord): string {
+  if (record.usd) return formatAmountInput(record.usd.originalAmount);
+  return formatAmountInput(record.amount);
+}
+
+function initialCurrency(record: EditableRecord): DraftCurrency {
+  return record.usd ? "USD" : "BYN";
+}
+
 /**
  * Edit / Delete form for one committed Expense or Income.
  * Not a Draft: Channel and kind are shown read-only and never sent as mutable.
@@ -45,7 +56,10 @@ export function EditRecord({
   deleteFn = deleteCommittedRecord,
 }: Props) {
   const router = useRouter();
-  const [amount, setAmount] = useState(formatAmountInput(record.amount));
+  const [currency, setCurrency] = useState<DraftCurrency>(
+    initialCurrency(record),
+  );
+  const [amount, setAmount] = useState(initialAmount(record));
   const [occurredOn, setOccurredOn] = useState(record.occurredOn);
   const [categoryId, setCategoryId] = useState(record.categoryId ?? "");
   const [note, setNote] = useState(record.note ?? "");
@@ -60,6 +74,7 @@ export function EditRecord({
     occurredOn,
     categoryId,
     note,
+    currency,
   };
   const ready = canCommit(draftShape);
 
@@ -76,6 +91,7 @@ export function EditRecord({
         occurredOn,
         categoryId,
         note,
+        currency,
       });
 
       if (result.status === "ok") {
@@ -134,8 +150,18 @@ export function EditRecord({
             </p>
           ) : null}
 
-          <label className="mt-5 block">
-            <span className="ui-kicker">Сумма (BYN)</span>
+          <div className="mt-5 rounded-2xl bg-white px-4 py-3 shadow-card">
+            <div className="flex items-center justify-between gap-2">
+              <span className="ui-kicker">Сумма</span>
+              <CurrencyChips
+                value={currency}
+                tone="light"
+                onChange={(c) => {
+                  setError(null);
+                  setCurrency(c);
+                }}
+              />
+            </div>
             <input
               name="amount"
               value={amount}
@@ -145,10 +171,16 @@ export function EditRecord({
               }}
               inputMode="decimal"
               autoComplete="off"
-              className="ui-field mt-1.5 text-xl font-bold tabular-nums"
+              aria-label="Сумма"
+              className="mt-1.5 w-full border-0 bg-transparent p-0 text-xl font-bold tabular-nums outline-none"
               aria-required
             />
-          </label>
+            {currency === "USD" ? (
+              <p className="mt-1 text-[11px] leading-snug text-ink-muted">
+                BYN пересчитается по курсу на момент сохранения
+              </p>
+            ) : null}
+          </div>
 
           <label className="mt-3 block">
             <span className="ui-kicker">Дата</span>

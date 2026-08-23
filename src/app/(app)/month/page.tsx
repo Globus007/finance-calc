@@ -5,7 +5,9 @@ import {
   currentYearMonth,
   resolveYearMonth,
 } from "@/lib/dates/minsk-month";
+import { getEffectiveRate } from "@/lib/fx";
 import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
+import { formatUsdApprox } from "@/lib/money/format";
 import { loadMonthMoney } from "@/lib/money/load-money";
 
 /**
@@ -27,6 +29,16 @@ export default async function MonthPage({
   const { totals, items } = await loadMonthMoney(yearMonth);
   const breakdown = computeCategoryBreakdown(items);
 
+  // Server-side precompute: components receive ready-made strings (ADR-0013).
+  const rate = await getEffectiveRate();
+  const secondary = rate
+    ? {
+        net: formatUsdApprox(totals.net / rate.rate),
+        income: formatUsdApprox(totals.incomeTotal / rate.rate),
+        expense: formatUsdApprox(totals.expenseTotal / rate.rate),
+      }
+    : null;
+
   return (
     <div className="ui-page pb-12">
       <h1 className="text-[1.55rem] font-bold tracking-[-0.04em]">Итог месяца</h1>
@@ -37,7 +49,12 @@ export default async function MonthPage({
       <MonthSwitcher yearMonth={yearMonth} />
 
       <div className="mt-5">
-        <MonthlyTotalCard totals={totals} caption="Нетто" showBars />
+        <MonthlyTotalCard
+          totals={totals}
+          caption="Нетто"
+          showBars
+          secondary={secondary}
+        />
       </div>
 
       <div className="mt-6">

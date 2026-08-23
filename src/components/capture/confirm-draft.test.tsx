@@ -269,6 +269,7 @@ describe("ConfirmDraft", () => {
         occurredOn: "2026-08-05",
         categoryId: "cat-products",
         note: "",
+        currency: "BYN",
       });
     });
     expect(commitFn.mock.calls[0][0]).not.toHaveProperty("channel");
@@ -454,6 +455,74 @@ describe("switchDraftKind", () => {
       ...base,
       kind: "expense",
       categoryId: "",
+    });
+  });
+});
+
+describe("ConfirmDraft currency chips (ADR-0013)", () => {
+  it("defaults to the BYN chip and switches to $ in one tap", async () => {
+    const user = userEvent.setup();
+    render(
+      <ConfirmDraft
+        initialDraft={createManualDraft(
+          "expense",
+          new Date("2026-08-05T09:00:00.000Z"),
+        )}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={vi.fn()}
+      />,
+    );
+
+    const group = screen.getByRole("group", { name: "Валюта" });
+    expect(group).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "BYN" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "$" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+
+    await user.click(screen.getByRole("button", { name: "$" }));
+    expect(screen.getByRole("button", { name: "$" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("keeps Commit enabled for USD without a client-side rate and sends the currency", async () => {
+    const user = userEvent.setup();
+    const commitFn = vi.fn().mockResolvedValue({ status: "ok", id: "e1" });
+    render(
+      <ConfirmDraft
+        initialDraft={createManualDraft(
+          "expense",
+          new Date("2026-08-05T09:00:00.000Z"),
+        )}
+        categories={categories}
+        onDiscard={vi.fn()}
+        onCommitted={vi.fn()}
+        commitFn={commitFn}
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/Сумма/i), "50");
+    await user.click(screen.getByRole("button", { name: "Продукты" }));
+    await user.click(screen.getByRole("button", { name: "$" }));
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    await waitFor(() => {
+      expect(commitFn).toHaveBeenCalledWith({
+        kind: "expense",
+        amount: "50",
+        occurredOn: "2026-08-05",
+        categoryId: "cat-products",
+        note: "",
+        currency: "USD",
+      });
     });
   });
 });

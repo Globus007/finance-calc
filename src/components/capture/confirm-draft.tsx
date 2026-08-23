@@ -9,7 +9,7 @@ import {
 } from "@/app/(app)/capture/actions";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import { commitErrorMessage } from "@/lib/draft/error-messages";
-import type { Draft, RecordKind } from "@/lib/draft/types";
+import type { Draft, DraftCurrency, RecordKind } from "@/lib/draft/types";
 import { canCommit } from "@/lib/draft/validate-commit";
 import { MAX_NOTE_LENGTH } from "@/lib/draft/normalize-note";
 
@@ -19,6 +19,7 @@ type CommitInput = {
   occurredOn: string;
   categoryId: string;
   note: string;
+  currency: DraftCurrency;
 };
 
 type Props = {
@@ -47,6 +48,56 @@ export function switchDraftKind(draft: Draft, kind: RecordKind): Draft {
     return { ...draft, kind: "income", categoryId: "" };
   }
   return { ...draft, kind: "expense", categoryId: "" };
+}
+
+/**
+ * Currency chip pair «BYN | $» next to Amount (ADR-0013): one tap to enter
+ * dollars; conversion happens server-side at Commit.
+ */
+export function CurrencyChips({
+  value,
+  onChange,
+  tone = "hero",
+}: {
+  value: DraftCurrency;
+  onChange: (currency: DraftCurrency) => void;
+  /** "hero" on the dark amount card; "light" on white cards. */
+  tone?: "hero" | "light";
+}) {
+  const selectedClass =
+    tone === "hero"
+      ? "bg-white text-ink shadow-card"
+      : "bg-ink text-white shadow-card";
+  const idleClass =
+    tone === "hero"
+      ? "border border-white/40 text-white/75 hover:bg-white/10"
+      : "border border-line bg-surface-strong text-ink-muted hover:border-brand-soft hover:bg-white";
+  return (
+    <span
+      className="flex shrink-0 gap-1"
+      role="group"
+      aria-label="Валюта"
+    >
+      {(
+        [
+          { code: "BYN" as const, label: "BYN" },
+          { code: "USD" as const, label: "$" },
+        ] as const
+      ).map((opt) => (
+        <button
+          key={opt.code}
+          type="button"
+          onClick={() => onChange(opt.code)}
+          aria-pressed={value === opt.code}
+          className={`cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-bold transition active:scale-95 ${
+            value === opt.code ? selectedClass : idleClass
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </span>
+  );
 }
 
 /**
@@ -98,6 +149,7 @@ export function ConfirmDraft({
         occurredOn: draft.occurredOn,
         categoryId: draft.categoryId,
         note: draft.note,
+        currency: draft.currency ?? "BYN",
       });
 
       if (result.status === "ok") {
@@ -183,10 +235,16 @@ export function ConfirmDraft({
             </p>
           ) : null}
 
-          <label className="mt-5 block rounded-hero bg-hero px-4 py-3.5 text-white shadow-hero">
-            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-hero-caption">
-              Сумма · BYN
-            </span>
+          <div className="mt-5 rounded-hero bg-hero px-4 py-3.5 text-white shadow-hero">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-hero-caption">
+                Сумма
+              </span>
+              <CurrencyChips
+                value={draft.currency ?? "BYN"}
+                onChange={(currency) => patch({ currency })}
+              />
+            </div>
             <input
               name="amount"
               value={draft.amount}
@@ -194,10 +252,11 @@ export function ConfirmDraft({
               inputMode="decimal"
               autoComplete="off"
               autoFocus={focusAmount}
+              aria-label="Сумма"
               className="mt-2 w-full border-0 bg-transparent p-0 text-[2.1rem] font-bold leading-none tracking-[-0.05em] text-white tabular-nums outline-none placeholder:text-white/35"
               aria-required
             />
-          </label>
+          </div>
 
           {draft.kind === "expense" ? (
             <div className="mt-5">

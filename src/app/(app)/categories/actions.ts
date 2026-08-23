@@ -75,7 +75,8 @@ async function isCategoryInUse(
 }
 
 function revalidateCategories() {
-  revalidatePath("/categories");
+  // Categories management lives inside Settings now (ADR-0013).
+  revalidatePath("/settings");
   revalidatePath("/");
 }
 

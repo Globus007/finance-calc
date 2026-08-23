@@ -10,6 +10,8 @@ type CommitActionError =
 const MESSAGES: Record<CommitActionError, string> = {
   amount_required: "Укажите сумму больше нуля.",
   amount_too_large: "Сумма не больше 9 999 999 999,99.",
+  currency_rate_unavailable:
+    "Курс доллара сейчас недоступен. Задайте курс в Настройках или выберите BYN.",
   date_required: "Укажите корректную дату.",
   category_required: "Выберите категорию.",
   note_too_long: "Заметка не длиннее 500 символов.",

@@ -136,6 +136,7 @@ describe("EditRecord", () => {
         occurredOn: "2026-08-04",
         categoryId: "cat-products",
         note: "Евроопт",
+        currency: "BYN",
       });
     });
   });
@@ -177,5 +178,71 @@ describe("EditRecord", () => {
 
     await user.click(screen.getByRole("button", { name: "Удалить" }));
     expect(deleteFn).not.toHaveBeenCalled();
+  });
+});
+
+describe("EditRecord currency chips (ADR-0013)", () => {
+  it("opens a $ record prefilled with the original typed amount and $ chip active", () => {
+    render(
+      <EditRecord
+        record={expense({
+          amount: 165,
+          usd: { originalAmount: 50, fxRate: 3.3012 },
+        })}
+        categories={categories}
+        editFn={vi.fn()}
+      />,
+    );
+
+    const chips = screen.getByRole("group", { name: "Валюта" });
+    expect(chips).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "$" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "BYN" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByLabelText(/Сумма/i)).toHaveValue("50.00");
+  });
+
+  it("submits the chosen currency so BYN is recomputed at save time", async () => {
+    const user = userEvent.setup();
+    const editFn = vi.fn().mockResolvedValue({ status: "ok" });
+    render(
+      <EditRecord
+        record={expense({
+          amount: 165,
+          usd: { originalAmount: 50, fxRate: 3.3012 },
+        })}
+        categories={categories}
+        editFn={editFn}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "BYN" }));
+    await user.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    await waitFor(() => {
+      expect(editFn).toHaveBeenCalledWith(
+        expect.objectContaining({ currency: "BYN" }),
+      );
+    });
+  });
+
+  it("defaults to the BYN chip for native records", () => {
+    render(
+      <EditRecord
+        record={expense()}
+        categories={categories}
+        editFn={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "BYN" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 });

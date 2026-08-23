@@ -185,6 +185,7 @@ describe("draftFromNormalized", () => {
       occurredOn: "2026-08-05",
       categoryId: FALLBACK,
       note: "Cafe",
+      currency: "BYN",
     });
   });
 
@@ -206,6 +207,7 @@ describe("draftFromNormalized", () => {
       occurredOn: "2026-08-05",
       categoryId: "",
       note: "зарплата",
+      currency: "BYN",
     });
   });
 });

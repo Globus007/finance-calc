@@ -11,8 +11,10 @@ export type HistoryChannel = "photo" | "voice" | "manual";
 export type HistoryItem = {
   id: string;
   kind: HistoryKind;
-  /** BYN amount (> 0). */
+  /** BYN amount (> 0); canonical, drives all aggregates. */
   amount: number;
+  /** Present only when entered in USD: original typed amount + rate (ADR-0013). */
+  usd?: UsdSnapshot | null;
   /** Occurred on as YYYY-MM-DD. */
   occurredOn: string;
   /** Commit time (ISO); tie-break for sort only. */
@@ -31,4 +33,12 @@ export type MonthlyTotal = {
   incomeTotal: number;
   /** incomeTotal − expenseTotal (derived). */
   net: number;
+};
+
+/** Snapshot kept on committed records entered in USD (ADR-0013). */
+export type UsdSnapshot = {
+  /** Amount as originally typed, in USD. */
+  originalAmount: number;
+  /** USD→BYN rate fixed at Commit / Edit-save. */
+  fxRate: number;
 };

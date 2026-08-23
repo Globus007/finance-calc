@@ -54,9 +54,9 @@ describe("HomeDashboard", () => {
       "href",
       "/history",
     );
-    expect(screen.getByRole("link", { name: "Категории" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute(
       "href",
-      "/categories",
+      "/settings",
     );
     expect(screen.getByText("Продукты")).toBeInTheDocument();
 

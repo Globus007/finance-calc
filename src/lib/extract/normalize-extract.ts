@@ -94,6 +94,8 @@ export function draftFromNormalized(
     occurredOn: normalized.occurredOn,
     categoryId: normalized.categoryId,
     note: normalized.note,
+    // Extraction is BYN-only this iteration (ADR-0013 out of scope).
+    currency: "BYN",
   };
 }
 

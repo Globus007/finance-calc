@@ -150,6 +150,7 @@ describe("extractDraft", () => {
         occurredOn: "2026-08-05",
         categoryId: "cat-other",
         note: "Магазин",
+        currency: "BYN",
       },
       categories: VISIBLE,
     });
@@ -186,6 +187,7 @@ describe("extractDraft", () => {
         occurredOn: "2026-08-05",
         categoryId: "",
         note: "зарплата",
+        currency: "BYN",
       },
       categories: VISIBLE,
     });
@@ -246,6 +248,7 @@ describe("extractDraft", () => {
         occurredOn: "2026-08-05",
         categoryId: "cat-food",
         note: "",
+        currency: "BYN",
       },
       categories: VISIBLE,
     });

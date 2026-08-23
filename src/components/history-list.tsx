@@ -4,7 +4,11 @@ import {
   IconArrowUpRight,
 } from "@/components/icons";
 import { channelLabelRu } from "@/lib/money/channel-label";
-import { formatByn, formatShortDate } from "@/lib/money/format";
+import {
+  formatByn,
+  formatShortDate,
+  formatUsdBadge,
+} from "@/lib/money/format";
 import type { HistoryItem } from "@/lib/money/history-types";
 
 type Props = {
@@ -44,6 +48,8 @@ function HistoryRow({ item }: { item: HistoryItem }) {
   const subtitleParts = [
     formatShortDate(item.occurredOn),
     !isIncome && item.note ? item.note : null,
+    // Records entered in $ keep their original figure visible (story #14).
+    item.usd ? formatUsdBadge(item.usd) : null,
     channelLabelRu(item.channel),
   ].filter(Boolean);
   const href = `/history/${item.kind}/${item.id}`;

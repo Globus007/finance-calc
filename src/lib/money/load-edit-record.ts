@@ -4,16 +4,17 @@ import {
 } from "@/lib/categories/map-row";
 import { sortCategoriesForManage } from "@/lib/categories/sort-categories";
 import type { CategoryPickerItem } from "@/lib/categories/types";
+import type { UsdSnapshot } from "./history-types";
 import { createClient } from "@/lib/supabase/server";
 import { categoriesForExpenseEdit } from "./edit-categories";
 import type { EditRecordPageData, EditableRecord } from "./edit-types";
 import type { HistoryChannel } from "./history-types";
 
 const EXPENSE_EDIT_SELECT =
-  "id, amount, occurred_on, note, channel, category_id" as const;
+  "id, amount, occurred_on, note, channel, category_id, currency, original_amount, fx_rate" as const;
 
 const INCOME_EDIT_SELECT =
-  "id, amount, occurred_on, note, channel" as const;
+  "id, amount, occurred_on, note, channel, currency, original_amount, fx_rate" as const;
 
 type ExpenseEditRow = {
   id: string;
@@ -22,6 +23,9 @@ type ExpenseEditRow = {
   note: string | null;
   channel: string;
   category_id: string;
+  currency?: string | null;
+  original_amount?: string | number | null;
+  fx_rate?: string | number | null;
 };
 
 type IncomeEditRow = {
@@ -30,6 +34,9 @@ type IncomeEditRow = {
   occurred_on: string;
   note: string | null;
   channel: string;
+  currency?: string | null;
+  original_amount?: string | number | null;
+  fx_rate?: string | number | null;
 };
 
 /**
@@ -111,6 +118,7 @@ function mapExpenseEdit(row: ExpenseEditRow): EditableRecord {
     id: row.id,
     kind: "expense",
     amount: parseNumeric(row.amount),
+    usd: mapUsdEdit(row),
     occurredOn: row.occurred_on,
     categoryId: row.category_id,
     note: row.note,
@@ -123,6 +131,7 @@ function mapIncomeEdit(row: IncomeEditRow): EditableRecord {
     id: row.id,
     kind: "income",
     amount: parseNumeric(row.amount),
+    usd: mapUsdEdit(row),
     occurredOn: row.occurred_on,
     categoryId: null,
     note: row.note,
@@ -133,6 +142,27 @@ function mapIncomeEdit(row: IncomeEditRow): EditableRecord {
 function parseChannel(raw: string): HistoryChannel {
   if (raw === "photo" || raw === "voice" || raw === "manual") return raw;
   return "manual";
+}
+
+/** Old rows read as BYN: absent/null snapshot columns mean native BYN. */
+function mapUsdEdit(row: {
+  currency?: string | null;
+  original_amount?: string | number | null;
+  fx_rate?: string | number | null;
+}): UsdSnapshot | null {
+  if (row.currency !== "USD") return null;
+  if (row.original_amount == null || row.fx_rate == null) return null;
+  const originalAmount = parseNumeric(row.original_amount);
+  // Rates keep four fraction digits (numeric(12,4)) — never round to 2.
+  const fxRate = parseRate(row.fx_rate);
+  if (originalAmount <= 0 || fxRate <= 0) return null;
+  return { originalAmount, fxRate };
+}
+
+function parseRate(value: string | number): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(Number(`${n}e4`)) / 10_000;
 }
 
 function parseNumeric(value: string | number): number {

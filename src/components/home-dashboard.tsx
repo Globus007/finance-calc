@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { HistoryList } from "@/components/history-list";
-import { IconTags } from "@/components/icons";
+import { IconGear } from "@/components/icons";
 import { RemainderCard } from "@/components/remainder-card";
 import type { HistoryItem, MonthlyTotal } from "@/lib/money/history-types";
 import type { Opening } from "@/lib/opening/types";
@@ -12,6 +12,8 @@ type Props = {
   recent: HistoryItem[];
   today: string;
   tomorrow: string;
+  /** Ready-made "≈ $N" line under Remainder; null when no rate (ADR-0013). */
+  usdRemainder?: string | null;
 };
 
 /**
@@ -25,6 +27,7 @@ export function HomeDashboard({
   recent,
   today,
   tomorrow,
+  usdRemainder = null,
 }: Props) {
   return (
     <div className="ui-page min-w-0">
@@ -44,11 +47,11 @@ export function HomeDashboard({
           </div>
         </div>
         <Link
-          href="/categories"
+          href="/settings"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-ink shadow-card transition hover:bg-white active:scale-95"
-          aria-label="Категории"
+          aria-label="Настройки"
         >
-          <IconTags size={18} />
+          <IconGear size={18} />
         </Link>
       </header>
 
@@ -59,6 +62,7 @@ export function HomeDashboard({
           monthTotals={monthTotals}
           today={today}
           tomorrow={tomorrow}
+          usdRemainder={usdRemainder}
         />
       </div>
 
