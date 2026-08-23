@@ -33,9 +33,9 @@ export default async function MonthPage({
   const rate = await getEffectiveRate();
   const secondary = rate
     ? {
-        net: formatUsdApprox(totals.net),
-        income: formatUsdApprox(totals.incomeTotal),
-        expense: formatUsdApprox(totals.expenseTotal),
+        net: formatUsdApprox(totals.net / rate.rate),
+        income: formatUsdApprox(totals.incomeTotal / rate.rate),
+        expense: formatUsdApprox(totals.expenseTotal / rate.rate),
       }
     : null;
 

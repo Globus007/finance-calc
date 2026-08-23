@@ -62,7 +62,7 @@ export type CommitFx = { rate: number };
  * - Expense: Amount > 0 + Occurred on + Category
  * - Income: Amount > 0 + Occurred on
  * Channel is not user-edited; photo forbidden for Income.
- * Limits apply to the amount as typed; a USD draft converts to canonical BYN
+ * Limits apply to the canonical amount; a USD draft converts to canonical BYN
  * half-up at the injected rate, fixed once at Commit/Edit-save.
  */
 export function validateCommit(
@@ -94,6 +94,9 @@ export function validateCommit(
       return { ok: false, reason: "currency_rate_unavailable" };
     }
     canonical = roundHalfUp2(amount * rate);
+    if (canonical > MAX_COMMIT_AMOUNT) {
+      return { ok: false, reason: "amount_too_large" };
+    }
     fxRate = rate;
   }
 

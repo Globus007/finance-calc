@@ -16,7 +16,9 @@ export default async function HomePage() {
   // Server-side precompute: components receive ready-made strings (ADR-0013).
   const rate = remainder !== null ? await getEffectiveRate() : null;
   const usdRemainder =
-    rate && remainder !== null ? formatUsdApprox(remainder * rate.rate) : null;
+    rate && remainder !== null
+      ? formatUsdApprox(remainder / rate.rate)
+      : null;
 
   return (
     <HomeDashboard

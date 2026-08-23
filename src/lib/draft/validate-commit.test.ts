@@ -168,7 +168,19 @@ describe("validateCommit with currency (ADR-0013)", () => {
     });
   });
 
-  it("checks the column limit against the amount as typed", () => {
+  it("checks the column limit against the canonical amount after USD conversion", () => {
+    // Typed amount itself is below the ceiling, but the converted BYN total exceeds it.
+    expect(
+      validateCommit(
+        expense({ amount: "4000000000", currency: "USD" }),
+        { rate: 3.3 },
+      ),
+    ).toEqual({
+      ok: false,
+      reason: "amount_too_large",
+    });
+
+    // Typed amount above the ceiling is still rejected before conversion.
     expect(
       validateCommit(
         expense({ amount: "10000000000", currency: "USD" }),
