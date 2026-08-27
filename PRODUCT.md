@@ -8,15 +8,15 @@ web
 
 ## Users
 
-Primary users are people tracking their own personal money, not a family shared budget and not a multi-account household.
+Primary users are people tracking their own personal money, not a family shared budget and not a team account.
 
-They use the product in short, in-the-moment sessions: a receipt, a spoken amount, or a typed Amount, then a glance at cash on hand and this month. One authenticated person per account. The product is for a general personal-finance audience, not a single private operator.
+They use the product in short, in-the-moment sessions: a receipt, a spoken amount, or a typed Amount, then a glance at cash on hand and this month. One authenticated person, tracking their own Accounts (tills) in different currencies. The product is for a general personal-finance audience, not a single private operator.
 
 UI copy is Russian.
 
 ## Product Purpose
 
-finance-calc lets one person record personal Expenses and Incomes in BYN, then see live cash Remainder and calendar-month totals.
+finance-calc lets one person record personal Expenses and Incomes across named Accounts in their own currencies (BYN, USD, EUR), move money between Accounts with Transfers, and see a live per-Account Remainder and calendar-month totals.
 
 Success is a committed record after a fast capture cycle, and a trustworthy Remainder after Set Opening — not budgets, savings goals, or an AI chat that explains spending.
 
@@ -24,15 +24,15 @@ Success is a committed record after a fast capture cycle, and a trustworthy Rema
 
 The product is capture-first: photo (receipt → Expense), voice, or manual → one in-flight Draft → Commit or Discard. Photo is Expense-only. Voice and manual work for Expense and Income. Media is ephemeral; confirm holds Draft fields only.
 
-That cycle, plus live Remainder from a dated Opening, is the mechanism. Neighboring finance apps that lead with accounts, budgets, or an assistant chat cannot truthfully claim this as their core job.
+That cycle, plus a live per-Account Remainder from a dated Opening, is the mechanism. Neighboring finance apps that lead with budgets, portfolios, or an assistant chat cannot truthfully claim this as their core job.
 
 ## Operating Context
 
 - Installable PWA (camera and microphone need HTTPS).
-- Home: Remainder, current-month tiles, recent History. Category breakdown is on Month only. Bottom dock: Домой | photo · voice (primary) · manual | Месяц. Categories from the header; full History via «Все».
+- Home: cross-account Remainder aggregate in BYN (≈) plus per-Account cards (each in its own Currency), current-month tiles, recent History. Category breakdown is on Month only. Bottom dock: Домой | photo · voice (primary) · manual | Месяц. Categories from the header; full History via «Все».
 - Confirm is the same field set across Channels; Channels differ only in prefill. At most one open Draft per user on a given surface.
-- Month screen: Monthly total (expense total, income total, net) for Europe/Minsk calendar months.
-- History: mixed committed Expenses and Incomes; Edit and Delete of committed records; Drafts never appear.
+- Month screen: Monthly total per Account (expense total, income total, net, in the Account's Currency) plus a cross-account BYN aggregate line, for Europe/Minsk calendar months.
+- History: mixed committed Expenses, Incomes, and Transfers; Edit and Delete of committed records; Drafts never appear.
 - Auth: email 6-digit OTP (PWA-safe), plus Google / GitHub / Discord OAuth; magic link is secondary.
 - Telegram bot exists as a working Expense-capture surface (photo + voice → in-chat confirm → same committed Expenses). It is not the core product or the brand surface. PWA design does not have to mimic chat.
 - Domain vocabulary and rules: `CONTEXT.md`. Architectural decisions: `docs/adr/`.
@@ -41,10 +41,10 @@ That cycle, plus live Remainder from a dated Opening, is the mechanism. Neighbor
 
 Confirmed:
 
-- Currency is BYN only. Product “today”, Occurred on, and calendar months use Europe/Minsk. No multi-currency and no device-timezone calendar.
-- Amount on Commit must be greater than zero. Opening amount may be zero, never negative. Remainder may be negative and does not block Commit. Remainder is absent (not zero) until the first Set Opening; Opening cannot be cleared after the first write.
-- Expense Commit requires Amount, Occurred on, Category. Income has no Category. System fallback Category display name is «Прочее».
-- One Commit creates exactly one Expense or one Income. Multi-item receipts still yield one Expense Draft (receipt grand total).
+- Accounts carry one Currency each, fixed at creation: BYN, USD, or EUR. Product “today”, Occurred on, and calendar months use Europe/Minsk. No device-timezone calendar.
+- Amount on Commit must be greater than zero. Opening is per Account and may be zero, never negative. Remainder per Account may be negative and does not block Commit; it is absent (not zero) until that Account's Set Opening; Opening cannot be cleared after the first write. The cross-account aggregate is in BYN and approximate («≈»).
+- Expense Commit requires Amount, Occurred on, Category, and an Account. Income has no Category. System fallback Category display name is «Прочее».
+- One Commit creates exactly one Expense or one Income. Multi-item receipts still yield one Expense Draft (receipt grand total). Transfers move money between own Accounts; they appear in History but not in Monthly totals or the aggregate.
 - Extraction failure recovery is a new capture on the same Channel, not retry of retained media.
 - Platform is web PWA, not native iOS or Android. The Dribbble reference looks native; that is not the shipping platform.
 
@@ -63,7 +63,7 @@ Undecided:
 - Binding visual reference for future visual work (look only, not product job, copy, currency, or features): https://cdn.dribbble.com/userupload/48773820/file/55a234bea82c520eba130803ec51bf7a.png?resize=3200x2400&vertical=center
 - Do not copy the reference’s product identity: “Money AI”, “AI Monty Assistant”, GBP, named fictional user, or assistant-chat IA.
 - No separate legal name, logo, or voice guide. Incumbent UI uses «Финансы», kicker «Личный обзор», and a `Br` mark.
-- Domain terms in `CONTEXT.md` are the product language (Expense, Income, Draft, Commit, Discard, Remainder, Opening, History, Monthly total, Channel, Receipt, Recording). Avoid the glossary’s listed synonyms in product copy and design docs.
+- Domain terms in `CONTEXT.md` are the product language (Account, Expense, Income, Transfer, Draft, Commit, Discard, Remainder, Opening, Monthly total, Channel, Receipt, Recording). Avoid the glossary’s listed synonyms in product copy and design docs.
 
 ## Evidence on Hand
 
@@ -78,10 +78,10 @@ Do not fabricate testimonials, customer names, benchmarks, pricing, or press.
 ## Product Principles
 
 1. Capture one real movement of money, then stop — the Draft is for confirming that one record, not a queue or a journal in progress.
-2. Remainder is counted cash from Opening, not a budget, account balance, or month net.
+2. Remainder is counted cash from Opening — per Account, in its Currency — not a budget, bank balance, or month net.
 3. Speed at the moment of spend beats analysis: photo, voice, and manual exist so the record happens before the receipt is lost.
 4. The PWA is the product surface; other channels (Telegram) may capture into the same records without setting the product’s job or look.
-5. Numbers the user sees must match Europe/Minsk dates and BYN — a prettier home screen that implies another currency or calendar is wrong.
+5. Numbers the user sees must match Europe/Minsk dates; per-Account figures appear in the Account's Currency and cross-account aggregates in BYN (≈) — a prettier home screen that implies a wrong currency or calendar is wrong.
 
 ## Accessibility & Inclusion
 
