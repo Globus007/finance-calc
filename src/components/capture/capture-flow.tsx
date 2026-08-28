@@ -10,7 +10,11 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { loadPickerCategories } from "@/app/(app)/capture/actions";
+import {
+  loadPickerAccounts,
+  loadPickerCategories,
+} from "@/app/(app)/capture/actions";
+import type { AccountPickerItem } from "@/lib/accounts/types";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import type {
   PhotoPreCaptureReason,
@@ -33,6 +37,7 @@ type CapturePhase =
       name: "confirm";
       draft: Draft;
       categories: CategoryPickerItem[];
+      accounts: AccountPickerItem[];
     };
 
 type CaptureContextValue = {
@@ -92,10 +97,15 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     setPhase({ name: "manual-loading" });
 
     startOpenConfirm(async () => {
-      const result = await loadPickerCategories();
-      if (result.status !== "ok") {
+      const [categoriesResult, accountsResult] = await Promise.all([
+        loadPickerCategories(),
+        loadPickerAccounts(),
+      ]);
+      const accounts =
+        accountsResult.status === "ok" ? accountsResult.accounts : [];
+      if (categoriesResult.status !== "ok") {
         setLoadError(
-          result.reason === "unauthenticated"
+          categoriesResult.reason === "unauthenticated"
             ? "Войдите в аккаунт."
             : "Не удалось загрузить категории. Попробуйте ещё раз.",
         );
@@ -103,13 +113,21 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
           name: "confirm",
           draft: createManualDraft("expense"),
           categories: [],
+          accounts,
         });
         return;
       }
+      const defaultAccount =
+        accounts.find((a) => a.isDefault) ?? accounts[0] ?? null;
       setPhase({
         name: "confirm",
-        draft: createManualDraft("expense"),
-        categories: result.categories,
+        draft: createManualDraft(
+          "expense",
+          undefined,
+          defaultAccount ?? undefined,
+        ),
+        categories: categoriesResult.categories,
+        accounts,
       });
     });
   }, []);
@@ -190,10 +208,12 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     abortRef.current = null;
 
     if (result.status === "ok") {
+      const accounts = await loadAccountsForConfirm();
       setPhase({
         name: "confirm",
         draft: result.draft,
         categories: result.categories,
+        accounts,
       });
       return;
     }
@@ -263,10 +283,12 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
     abortRef.current = null;
 
     if (result.status === "ok") {
+      const accounts = await loadAccountsForConfirm();
       setPhase({
         name: "confirm",
         draft: result.draft,
         categories: result.categories,
+        accounts,
       });
       return;
     }
@@ -328,6 +350,12 @@ export function CaptureProvider({ children }: { children: React.ReactNode }) {
   return (
     <CaptureContext.Provider value={value}>{children}</CaptureContext.Provider>
   );
+}
+
+/** Best-effort Account list for the confirm sheet (label + manual picker). */
+async function loadAccountsForConfirm(): Promise<AccountPickerItem[]> {
+  const result = await loadPickerAccounts();
+  return result.status === "ok" ? result.accounts : [];
 }
 
 /** Full-screen capture UI; parent shell must be `position: relative`. */
@@ -417,6 +445,7 @@ export function CaptureLayer() {
           <ConfirmDraft
             initialDraft={phase.draft}
             categories={phase.categories}
+            accounts={phase.accounts}
             onDiscard={discard}
             onCommitted={onCommitted}
           />

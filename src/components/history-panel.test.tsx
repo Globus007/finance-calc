@@ -20,6 +20,8 @@ function expense(partial: Partial<HistoryItem> = {}): HistoryItem {
     categoryDisplayName: "Продукты",
     note: "Евроопт",
     channel: "photo",
+    snapshot: null,
+    accountId: "acc-1",
     ...partial,
   };
 }
@@ -35,6 +37,8 @@ function income(partial: Partial<HistoryItem> = {}): HistoryItem {
     categoryDisplayName: null,
     note: "Зарплата",
     channel: "manual",
+    snapshot: null,
+    accountId: "acc-1",
     ...partial,
   };
 }
@@ -42,6 +46,21 @@ function income(partial: Partial<HistoryItem> = {}): HistoryItem {
 const categories: CategoryPickerItem[] = [
   { id: "cat-food", displayName: "Продукты" },
   { id: "cat-transport", displayName: "Транспорт" },
+];
+
+const accounts = [
+  {
+    id: "acc-1",
+    name: "Наличные",
+    currency: "BYN" as const,
+    isDefault: true,
+  },
+  {
+    id: "acc-2",
+    name: "Доллары",
+    currency: "USD" as const,
+    isDefault: false,
+  },
 ];
 
 describe("HistoryPanel", () => {
@@ -96,7 +115,9 @@ describe("HistoryPanel", () => {
     await user.click(screen.getByRole("button", { name: "Доходы" }));
 
     expect(screen.getByLabelText(/Категория/i)).toBeDisabled();
-    expect(screen.getByText(/У доходов нет категории/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/У доходов и переводов нет категории/i),
+    ).toBeInTheDocument();
     const list = screen.getByRole("list", { name: "История" });
     expect(within(list).getByText("Зарплата")).toBeInTheDocument();
     expect(within(list).queryByText("Продукты")).not.toBeInTheDocument();
@@ -188,5 +209,28 @@ describe("HistoryPanel", () => {
     expect(within(list).getByText("Транспорт")).toBeInTheDocument();
     expect(within(list).queryByText("Рано")).not.toBeInTheDocument();
     expect(within(list).queryByText("Поздно")).not.toBeInTheDocument();
+  });
+
+  it("prefills the Account filter from Home «Все» (?acc=)", () => {
+    render(
+      <HistoryPanel
+        items={[
+          expense(),
+          expense({
+            id: "e2",
+            accountId: "acc-2",
+            categoryDisplayName: "Такси",
+          }),
+        ]}
+        categories={categories}
+        accounts={accounts}
+        initialAccountId="acc-1"
+      />,
+    );
+
+    expect(screen.getByLabelText(/Счёт/i)).toHaveValue("acc-1");
+    const list = screen.getByRole("list", { name: "История" });
+    expect(within(list).getByText("Продукты")).toBeInTheDocument();
+    expect(within(list).queryByText("Такси")).not.toBeInTheDocument();
   });
 });

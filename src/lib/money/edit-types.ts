@@ -1,8 +1,10 @@
+import type { Account } from "@/lib/accounts/types";
 import type { CategoryPickerItem } from "@/lib/categories/types";
+import type { RateMap } from "@/lib/fx";
 import type {
+  AmountSnapshot,
   HistoryChannel,
   HistoryKind,
-  UsdSnapshot,
 } from "./history-types";
 
 /**
@@ -11,10 +13,13 @@ import type {
  */
 export type EditableRecord = {
   id: string;
-  kind: HistoryKind;
+  /** Expense | Income only — Transfers edit on their own surface. */
+  kind: "expense" | "income";
   amount: number;
-  /** Present when the record was entered in USD (prefills $ chip + typed amount). */
-  usd?: UsdSnapshot | null;
+  /** Present when the record was typed in USD/EUR (prefills Amount in that Currency). */
+  snapshot?: AmountSnapshot | null;
+  /** Owning Account; the picker prefills this. */
+  accountId?: string | null;
   /** YYYY-MM-DD */
   occurredOn: string;
   /** Expense Category id; null for Income. */
@@ -27,4 +32,8 @@ export type EditRecordPageData = {
   record: EditableRecord;
   /** Expense Edit picker (visible + current if hidden); empty for Income. */
   categories: CategoryPickerItem[];
+  /** Accounts the record may move to (default first). */
+  accounts: Account[];
+  /** Rates behind the «≈» prefill when the Account changes Currency. */
+  rates: RateMap;
 };

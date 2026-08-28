@@ -1,26 +1,31 @@
-import type { EffectiveRate } from "./types";
+import type { EffectiveRate, RateCurrency } from "./types";
 
-/**
- * "$1 = 3,3012" — four fraction digits, comma separator (Settings Fx line).
- */
-export function formatUsdRate(rate: number): string {
+/** "$1 = 3,0046" / "€1 = 3,5051" — four fraction digits, comma separator. */
+export function formatRate(currency: RateCurrency, rate: number): string {
   const formatted = rate.toLocaleString("ru-BY", {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   });
-  return `$1 = ${formatted}`;
+  return `${unitOf(currency)}1 = ${formatted}`;
+}
+
+export function unitOf(currency: RateCurrency): "$" | "€" {
+  return currency === "USD" ? "$" : "€";
 }
 
 /**
- * Full active-rate line for Settings (story #6):
- * "$1 = 3,3012 · NBRB 12.02" or "$1 = 3,35 · own".
+ * Full active-rate line for Settings:
+ * "$1 = 3,3012 · НБРБ 12.02" or "$1 = 3,35 · свой".
  */
-export function formatActiveRateLine(effective: EffectiveRate): string {
+export function formatActiveRateLine(
+  currency: RateCurrency,
+  effective: EffectiveRate,
+): string {
   const origin =
     effective.source === "override"
       ? "own"
       : `NBRB ${formatDayMonth(effective.asOf)}`;
-  return `${formatUsdRate(effective.rate)} · ${origin}`;
+  return `${formatRate(currency, effective.rate)} · ${origin}`;
 }
 
 /** "12.02" day.month from an ISO instant, in Europe/Minsk. */

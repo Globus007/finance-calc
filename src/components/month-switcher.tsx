@@ -9,6 +9,8 @@ import {
 type Props = {
   /** Selected calendar month as YYYY-MM (Europe/Minsk product calendar). */
   yearMonth: string;
+  /** Href builder (keeps the Account selection across month switches). */
+  hrefFor?: (yearMonth: string) => string;
   /**
    * Latest month the user may browse (default: current Europe/Minsk month).
    * Past + current only — future months are out of product scope for MVP.
@@ -29,6 +31,7 @@ const navBtnDisabledClass =
 export function MonthSwitcher({
   yearMonth,
   maxYearMonth = currentYearMonth(),
+  hrefFor = (ym) => `/month?ym=${ym}`,
 }: Props) {
   const prevYm = shiftYearMonth(yearMonth, -1);
   const nextYm = shiftYearMonth(yearMonth, 1);
@@ -41,7 +44,7 @@ export function MonthSwitcher({
       aria-label={`Выбор месяца, ${label}`}
     >
       <Link
-        href={`/month?ym=${prevYm}`}
+        href={hrefFor(prevYm)}
         aria-label="Предыдущий месяц"
         className={navBtnClass}
       >
@@ -57,7 +60,7 @@ export function MonthSwitcher({
 
       {canGoNext ? (
         <Link
-          href={`/month?ym=${nextYm}`}
+          href={hrefFor(nextYm)}
           aria-label="Следующий месяц"
           className={navBtnClass}
         >

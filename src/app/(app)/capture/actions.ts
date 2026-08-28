@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  getDefaultAccount,
+  ensureDefaultAccount,
+  listAccounts,
+} from "@/lib/accounts/load-accounts";
+import type { AccountPickerItem } from "@/lib/accounts/types";
+import {
   CATEGORY_SELECT,
   mapCategoryRow,
 } from "@/lib/categories/map-row";
@@ -9,7 +15,6 @@ import { sortCategoriesForManage } from "@/lib/categories/sort-categories";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import type { CommitActionError } from "@/lib/draft/error-messages";
 import type { CaptureChannel, Draft, RecordKind } from "@/lib/draft/types";
-import type { DraftCurrency } from "@/lib/draft/types";
 import { validateCommit } from "@/lib/draft/validate-commit";
 import { getEffectiveRate } from "@/lib/fx";
 import { createClient } from "@/lib/supabase/server";
@@ -22,10 +27,15 @@ export type LoadPickerCategoriesResult =
   | { status: "ok"; categories: CategoryPickerItem[] }
   | { status: "error"; reason: "unauthenticated" | "unavailable" };
 
+export type LoadPickerAccountsResult =
+  | { status: "ok"; accounts: AccountPickerItem[] }
+  | { status: "error"; reason: "unauthenticated" | "unavailable" };
+
 /**
  * Confirm form payload. Channel is omitted on purpose: the server sets
  * channel from the commit action (manual vs photo) so a client cannot forge
- * provenance across capture paths.
+ * provenance across capture paths. Currency is omitted too: it comes from the
+ * Account the server resolves (ADR-0014).
  */
 export type CommitDraftInput = {
   kind: RecordKind;
@@ -33,8 +43,8 @@ export type CommitDraftInput = {
   occurredOn: string;
   categoryId: string;
   note: string;
-  /** Typed currency; anything but USD is treated as BYN (server trust boundary). */
-  currency?: DraftCurrency;
+  /** Manual capture picks an Account; other Channels fall back to the default. */
+  accountId?: string;
 };
 
 function revalidateMoneySurfaces() {
@@ -80,9 +90,31 @@ export async function loadPickerCategories(): Promise<LoadPickerCategoriesResult
   return { status: "ok", categories };
 }
 
+/** Accounts for the manual confirm picker (default first). */
+export async function loadPickerAccounts(): Promise<LoadPickerAccountsResult> {
+  const { user } = await requireUser();
+  if (!user) return { status: "error", reason: "unauthenticated" };
+
+  try {
+    const accounts = await listAccounts();
+    return {
+      status: "ok",
+      accounts: accounts.map((a) => ({
+        id: a.id,
+        name: a.name,
+        currency: a.currency,
+        isDefault: a.isDefault,
+      })),
+    };
+  } catch {
+    return { status: "error", reason: "unavailable" };
+  }
+}
+
 /**
  * Commit a confirmed manual Draft: inserts one Expense or one Income with
- * Channel fixed to `manual` on the server (not client-supplied).
+ * Channel fixed to `manual` on the server (not client-supplied) and the
+ * Account the user picked.
  * On failure the client keeps the Draft on confirm for retry or Discard
  * (not Extraction failure — ADR-0003 / ADR-0008).
  */
@@ -115,6 +147,17 @@ async function commitWithChannel(
   input: CommitDraftInput,
   channel: CaptureChannel,
 ): Promise<CommitDraftResult> {
+  const { supabase, user } = await requireUser();
+  if (!user) return { status: "error", reason: "unauthenticated" };
+
+  // Server trust boundary: the Account decides the Currency (ADR-0014).
+  // Manual capture names an Account of this owner; every other Channel and an
+  // unknown id fall back to the default till so fast capture never stalls.
+  const account = await resolveCommitAccount(input.accountId, channel);
+  if (!account) {
+    return { status: "error", reason: "account_not_found" };
+  }
+
   const draft: Draft = {
     kind: input.kind,
     channel,
@@ -122,11 +165,11 @@ async function commitWithChannel(
     occurredOn: input.occurredOn,
     categoryId: input.categoryId,
     note: input.note,
-    // Server trust boundary: only explicit USD counts as USD.
-    currency: input.currency === "USD" ? "USD" : "BYN",
+    accountId: account.id,
+    currency: account.currency,
   };
 
-  // async-defer-await: pure shape validation before auth / DB I/O
+  // async-defer-await: pure shape validation before rate / DB I/O
   const shapeCheck = validateCommit(draft);
   if (
     !shapeCheck.ok &&
@@ -135,13 +178,10 @@ async function commitWithChannel(
     return { status: "error", reason: shapeCheck.reason };
   }
 
-  const { supabase, user } = await requireUser();
-  if (!user) return { status: "error", reason: "unauthenticated" };
-
-  // Rate resolved server-side only when the commit involves USD (ADR-0013).
+  // Rate resolved server-side only when the commit involves a non-BYN Account.
   let fx: { rate: number } | null = null;
-  if (draft.currency === "USD") {
-    const effective = await getEffectiveRate();
+  if (account.currency !== "BYN") {
+    const effective = await getEffectiveRate(account.currency);
     if (!effective) {
       return { status: "error", reason: "currency_rate_unavailable" };
     }
@@ -156,7 +196,7 @@ async function commitWithChannel(
   const snapshotColumns = {
     currency: validation.currency,
     original_amount:
-      validation.currency === "USD" ? validation.originalAmount : null,
+      validation.currency === "BYN" ? null : validation.originalAmount,
     fx_rate: validation.fxRate,
   };
 
@@ -179,6 +219,7 @@ async function commitWithChannel(
       .from("expenses")
       .insert({
         owner_id: user.id,
+        account_id: account.id,
         amount: validation.amount,
         ...snapshotColumns,
         occurred_on: validation.occurredOn,
@@ -211,6 +252,7 @@ async function commitWithChannel(
     .from("incomes")
     .insert({
       owner_id: user.id,
+      account_id: account.id,
       amount: validation.amount,
       ...snapshotColumns,
       occurred_on: validation.occurredOn,
@@ -226,4 +268,22 @@ async function commitWithChannel(
 
   revalidateMoneySurfaces();
   return { status: "ok", id: data.id as string };
+}
+
+/**
+ * Account a Commit writes to: the picked one for manual capture (must belong
+ * to this owner), the default till for photo / voice / unknown ids.
+ */
+async function resolveCommitAccount(
+  inputAccountId: string | undefined,
+  channel: CaptureChannel,
+) {
+  if (channel === "manual" && inputAccountId) {
+    const accounts = await listAccounts();
+    const picked = accounts.find((a) => a.id === inputAccountId);
+    if (picked) return picked;
+    // A stale picker value still commits somewhere honest: the default till.
+  }
+
+  return (await getDefaultAccount()) ?? (await ensureDefaultAccount());
 }

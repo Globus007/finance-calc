@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { HomeDashboard } from "./home-dashboard";
+import type { Account } from "@/lib/accounts/types";
 import type { HistoryItem } from "@/lib/money/history-types";
 
 vi.mock("next/navigation", () => ({
@@ -12,6 +13,13 @@ vi.mock("next/navigation", () => ({
 afterEach(() => {
   cleanup();
 });
+
+const account: Account = {
+  id: "acc-1",
+  name: "Наличные",
+  currency: "BYN",
+  isDefault: true,
+};
 
 const monthTotals = {
   expenseTotal: 60.7,
@@ -30,6 +38,8 @@ function expense(): HistoryItem {
     categoryDisplayName: "Продукты",
     note: "Евроопт",
     channel: "photo",
+    snapshot: null,
+    accountId: "acc-1",
   };
 }
 
@@ -37,12 +47,22 @@ describe("HomeDashboard", () => {
   it("shows Remainder, month tiles, and recent History without expense structure", () => {
     render(
       <HomeDashboard
-        remainder={2139.3}
-        opening={{ amount: 100, openedOn: "2026-08-10" }}
-        monthTotals={monthTotals}
+        accounts={[account]}
+        selected={account}
+        unknownAccount={false}
+        remainderText="2 139,30"
+        approxText={null}
+        currencyLabel="BYN"
+        opening={{ accountId: "acc-1", amount: 100, openedOn: "2026-08-10" }}
+        monthIncomeText="2 100,00"
+        monthExpenseText="60,70"
+        monthIncomeApprox={null}
+        monthExpenseApprox={null}
         recent={[expense()]}
+        accountById={{ "acc-1": account }}
         today="2026-08-14"
         tomorrow="2026-08-15"
+        hrefFor={(id) => (id ? `/?acc=${id}` : "/")}
       />,
     );
 
@@ -52,7 +72,7 @@ describe("HomeDashboard", () => {
     expect(screen.getByText("История")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Все" })).toHaveAttribute(
       "href",
-      "/history",
+      "/history?acc=acc-1",
     );
     expect(screen.getByRole("link", { name: "Настройки" })).toHaveAttribute(
       "href",

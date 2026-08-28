@@ -11,15 +11,17 @@ import {
   type EditRecordResult,
 } from "@/app/(app)/history/actions";
 import { IconArrowLeft } from "@/components/icons";
-import { CurrencyChips } from "@/components/capture/confirm-draft";
+import type { Account } from "@/lib/accounts/types";
 import type { CategoryPickerItem } from "@/lib/categories/types";
-import type { Draft, DraftCurrency } from "@/lib/draft/types";
+import type { Draft } from "@/lib/draft/types";
 import { MAX_NOTE_LENGTH } from "@/lib/draft/normalize-note";
 import { canCommit } from "@/lib/draft/validate-commit";
+import { convertAmount, type RateMap } from "@/lib/fx/client";
 import {
   deleteErrorMessage,
   editErrorMessage,
 } from "@/lib/money/error-messages";
+import { currencyLabel } from "@/lib/money/display";
 import type { EditableRecord } from "@/lib/money/edit-types";
 import { formatAmountInput } from "@/lib/money/format-amount-input";
 import { channelLabelRu } from "@/lib/money/channel-label";
@@ -27,42 +29,63 @@ import { channelLabelRu } from "@/lib/money/channel-label";
 type Props = {
   record: EditableRecord;
   categories: CategoryPickerItem[];
+  /** Accounts the record may move to (default first). */
+  accounts: Account[];
+  /** Rates behind the «≈» prefill on an Account change (ADR-0014). */
+  rates: RateMap;
   /** Injectable for tests. */
   editFn?: (input: EditRecordInput) => Promise<EditRecordResult>;
   deleteFn?: (
-    kind: EditableRecord["kind"],
+    kind: "expense" | "income",
     id: string,
   ) => Promise<DeleteRecordResult>;
 };
 
-/** Initial typed amount text: USD records edit the figure they remember. */
-function initialAmount(record: EditableRecord): string {
-  if (record.usd) return formatAmountInput(record.usd.originalAmount);
-  return formatAmountInput(record.amount);
+/** The Account the form currently edits against. */
+export function currentAccount(
+  accounts: Account[],
+  accountId: string | null | undefined,
+): Account | undefined {
+  return (
+    accounts.find((a) => a.id === accountId) ??
+    accounts.find((a) => a.isDefault) ??
+    accounts[0]
+  );
 }
 
-function initialCurrency(record: EditableRecord): DraftCurrency {
-  return record.usd ? "USD" : "BYN";
+/** Initial typed amount text: a $/€ record reopens in the Currency it remembers. */
+function initialAmount(record: EditableRecord, account: Account | undefined): string {
+  if (record.snapshot && record.snapshot.currency === account?.currency) {
+    return formatAmountInput(record.snapshot.originalAmount);
+  }
+  // Canonical BYN is the honest figure for a BYN till (legacy $ rows included).
+  return formatAmountInput(record.amount);
 }
 
 /**
  * Edit / Delete form for one committed Expense or Income.
  * Not a Draft: Channel and kind are shown read-only and never sent as mutable.
+ * Moving the record to another Account keeps the Amount when the Currencies
+ * match and prefills the converted figure («≈») when they differ (story #11).
  */
 export function EditRecord({
   record,
   categories,
+  accounts,
+  rates,
   editFn = editCommittedRecord,
   deleteFn = deleteCommittedRecord,
 }: Props) {
   const router = useRouter();
-  const [currency, setCurrency] = useState<DraftCurrency>(
-    initialCurrency(record),
-  );
-  const [amount, setAmount] = useState(initialAmount(record));
+  const initial = currentAccount(accounts, record.accountId);
+  const [accountId, setAccountId] = useState(initial?.id ?? record.accountId ?? "");
+  const account = currentAccount(accounts, accountId);
+  const currency = account?.currency ?? "BYN";
+  const [amount, setAmount] = useState(() => initialAmount(record, initial));
   const [occurredOn, setOccurredOn] = useState(record.occurredOn);
   const [categoryId, setCategoryId] = useState(record.categoryId ?? "");
   const [note, setNote] = useState(record.note ?? "");
+  const [convertedHint, setConvertedHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -74,9 +97,32 @@ export function EditRecord({
     occurredOn,
     categoryId,
     note,
+    accountId,
     currency,
   };
   const ready = canCommit(draftShape);
+
+  function onAccountChange(nextId: string) {
+    setError(null);
+    setConvertedHint(null);
+    const next = accounts.find((a) => a.id === nextId);
+    const previous = account;
+    setAccountId(nextId);
+    if (!next || !previous || next.currency === previous.currency) return;
+
+    const typed = Number(amount.replace(/\s/g, "").replace(",", "."));
+    if (!Number.isFinite(typed) || typed <= 0) return;
+
+    const converted = convertAmount(typed, previous.currency, next.currency, rates);
+    if (converted === null) {
+      setConvertedHint(
+        `Курс ${currencyLabel(next.currency)} недоступен — сумма осталась как введена.`,
+      );
+      return;
+    }
+    setAmount(formatAmountInput(converted));
+    setConvertedHint(`≈ пересчитано в ${next.name}`);
+  }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,7 +137,7 @@ export function EditRecord({
         occurredOn,
         categoryId,
         note,
-        currency,
+        accountId,
       });
 
       if (result.status === "ok") {
@@ -150,17 +196,38 @@ export function EditRecord({
             </p>
           ) : null}
 
-          <div className="mt-5 rounded-2xl bg-white px-4 py-3 shadow-card">
+          {accounts.length > 1 ? (
+            <label className="mt-3 block">
+              <span className="ui-kicker">Счёт</span>
+              <select
+                name="accountId"
+                value={accountId}
+                onChange={(e) => onAccountChange(e.target.value)}
+                className="ui-field mt-1.5"
+                aria-label="Счёт"
+              >
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} · {currencyLabel(a.currency)}
+                  </option>
+                ))}
+              </select>
+              {convertedHint ? (
+                <span className="mt-1 block text-[11px] text-ink-muted">
+                  {convertedHint}
+                </span>
+              ) : null}
+            </label>
+          ) : null}
+
+          <div className="mt-3 rounded-2xl bg-white px-4 py-3 shadow-card">
             <div className="flex items-center justify-between gap-2">
-              <span className="ui-kicker">Сумма</span>
-              <CurrencyChips
-                value={currency}
-                tone="light"
-                onChange={(c) => {
-                  setError(null);
-                  setCurrency(c);
-                }}
-              />
+              <span className="ui-kicker">Сумма · {currencyLabel(currency)}</span>
+              {account?.isDefault ? (
+                <span className="shrink-0 rounded-full bg-surface-strong px-2 py-0.5 text-[10px] font-bold text-ink-muted">
+                  основной
+                </span>
+              ) : null}
             </div>
             <input
               name="amount"
@@ -175,7 +242,7 @@ export function EditRecord({
               className="mt-1.5 w-full border-0 bg-transparent p-0 text-xl font-bold tabular-nums outline-none"
               aria-required
             />
-            {currency === "USD" ? (
+            {currency !== "BYN" ? (
               <p className="mt-1 text-[11px] leading-snug text-ink-muted">
                 BYN пересчитается по курсу на момент сохранения
               </p>

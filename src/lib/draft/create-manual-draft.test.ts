@@ -12,6 +12,7 @@ describe("createManualDraft", () => {
       occurredOn: "2026-08-05",
       categoryId: "",
       note: "",
+      accountId: "",
       currency: "BYN",
     });
   });
@@ -25,6 +26,7 @@ describe("createManualDraft", () => {
       occurredOn: "2026-08-05",
       categoryId: "",
       note: "",
+      accountId: "",
       currency: "BYN",
     });
   });

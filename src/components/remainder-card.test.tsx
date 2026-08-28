@@ -13,11 +13,7 @@ afterEach(() => {
   cleanup();
 });
 
-const monthTotals = {
-  expenseTotal: 60.7,
-  incomeTotal: 2100,
-  net: 2039.3,
-};
+const opening = { accountId: "acc-1", amount: 100, openedOn: "2026-08-10" };
 
 const emptyMonth = { expenseTotal: 0, incomeTotal: 0, net: 0 };
 
@@ -25,9 +21,12 @@ describe("RemainderCard", () => {
   it("prompts Set Opening when Remainder is absent and does not show 0,00 as Remainder", () => {
     render(
       <RemainderCard
-        remainder={null}
+        accountId="acc-1"
+        remainderText={null}
+        currencyLabel="BYN"
         opening={null}
-        monthTotals={emptyMonth}
+        monthIncomeText="0,00"
+        monthExpenseText="0,00"
         today="2026-08-14"
         tomorrow="2026-08-15"
       />,
@@ -46,9 +45,12 @@ describe("RemainderCard", () => {
   it("shows a positive Remainder figure and keeps month income/expense as secondary tiles", () => {
     render(
       <RemainderCard
-        remainder={2139.3}
-        opening={{ amount: 100, openedOn: "2026-08-10" }}
-        monthTotals={monthTotals}
+        accountId="acc-1"
+        remainderText="2 139,30"
+        currencyLabel="BYN"
+        opening={opening}
+        monthIncomeText="2 100,00"
+        monthExpenseText="60,70"
         today="2026-08-14"
         tomorrow="2026-08-15"
       />,
@@ -59,15 +61,20 @@ describe("RemainderCard", () => {
     expect(screen.getByText(/2\s?100,00/)).toBeInTheDocument();
     expect(screen.getByText(/60,70/)).toBeInTheDocument();
     expect(screen.queryByText(/баланс/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Изменить старт" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Изменить старт" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a negative Remainder without blocking the surface", () => {
     render(
       <RemainderCard
-        remainder={-30}
-        opening={{ amount: 20, openedOn: "2026-08-01" }}
-        monthTotals={emptyMonth}
+        accountId="acc-1"
+        remainderText="−30,00"
+        currencyLabel="BYN"
+        opening={{ accountId: "acc-1", amount: 20, openedOn: "2026-08-01" }}
+        monthIncomeText="0,00"
+        monthExpenseText="0,00"
         today="2026-08-14"
         tomorrow="2026-08-15"
       />,
@@ -81,13 +88,12 @@ describe("RemainderCard", () => {
   it("shows the exact month totals, including grouped digits, kopecks, and Br", () => {
     render(
       <RemainderCard
-        remainder={100}
-        opening={{ amount: 100, openedOn: "2026-08-10" }}
-        monthTotals={{
-          incomeTotal: 1_234_567.89,
-          expenseTotal: 9_876_543.21,
-          net: 1_234_567.89 - 9_876_543.21,
-        }}
+        accountId="acc-1"
+        remainderText="100,00"
+        currencyLabel="BYN"
+        opening={opening}
+        monthIncomeText="+1 234 567,89 Br"
+        monthExpenseText="−9 876 543,21 Br"
         today="2026-08-14"
         tomorrow="2026-08-15"
       />,
@@ -105,15 +111,20 @@ describe("RemainderCard", () => {
     const user = userEvent.setup();
     render(
       <RemainderCard
-        remainder={100}
-        opening={{ amount: 100, openedOn: "2026-08-10" }}
-        monthTotals={emptyMonth}
+        accountId="acc-1"
+        remainderText="100,00"
+        currencyLabel="BYN"
+        opening={opening}
+        monthIncomeText="0,00"
+        monthExpenseText="0,00"
         today="2026-08-14"
         tomorrow="2026-08-15"
       />,
     );
 
-    expect(screen.queryByLabelText("Сумма старта · BYN")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Сумма старта · BYN"),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Изменить старт" }));
     expect(screen.getByLabelText("Сумма старта · BYN")).toBeInTheDocument();
     expect(screen.getByLabelText("Дата старта")).toBeInTheDocument();
@@ -124,12 +135,15 @@ describe("RemainderCard USD secondary line (ADR-0013)", () => {
   it("shows the ready-made ≈ $ line under the Remainder figure", () => {
     render(
       <RemainderCard
-        remainder={2139.3}
-        opening={{ amount: 100, openedOn: "2026-08-10" }}
-        monthTotals={monthTotals}
+        accountId="acc-1"
+        remainderText="2 139,30"
+        approxText="≈ $2 139"
+        currencyLabel="BYN"
+        opening={opening}
+        monthIncomeText="2 100,00"
+        monthExpenseText="60,70"
         today="2026-08-14"
         tomorrow="2026-08-15"
-        usdRemainder="≈ $2 139"
       />,
     );
 
@@ -139,9 +153,12 @@ describe("RemainderCard USD secondary line (ADR-0013)", () => {
   it("shows no ≈ $ line when no rate was passed", () => {
     render(
       <RemainderCard
-        remainder={2139.3}
-        opening={{ amount: 100, openedOn: "2026-08-10" }}
-        monthTotals={monthTotals}
+        accountId="acc-1"
+        remainderText="2 139,30"
+        currencyLabel="BYN"
+        opening={opening}
+        monthIncomeText="2 100,00"
+        monthExpenseText="60,70"
         today="2026-08-14"
         tomorrow="2026-08-15"
       />,

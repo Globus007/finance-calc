@@ -1,7 +1,8 @@
+import type { RateCurrency } from "@/lib/fx";
 import type {
+  AmountSnapshot,
   HistoryChannel,
   HistoryItem,
-  UsdSnapshot,
 } from "./history-types";
 
 /** Supabase `expenses` row (+ optional joined category name). */
@@ -13,6 +14,7 @@ export type ExpenseDbRow = {
   channel: string;
   created_at: string;
   category_id: string;
+  account_id?: string | null;
   currency?: string | null;
   original_amount?: string | number | null;
   fx_rate?: string | number | null;
@@ -30,23 +32,25 @@ export type IncomeDbRow = {
   note: string | null;
   channel: string;
   created_at: string;
+  account_id?: string | null;
   currency?: string | null;
   original_amount?: string | number | null;
   fx_rate?: string | number | null;
 };
 
 export const EXPENSE_HISTORY_SELECT =
-  "id, amount, occurred_on, note, channel, created_at, category_id, currency, original_amount, fx_rate, categories(display_name)" as const;
+  "id, amount, occurred_on, note, channel, created_at, category_id, account_id, currency, original_amount, fx_rate, categories(display_name)" as const;
 
 export const INCOME_HISTORY_SELECT =
-  "id, amount, occurred_on, note, channel, created_at, currency, original_amount, fx_rate" as const;
+  "id, amount, occurred_on, note, channel, created_at, account_id, currency, original_amount, fx_rate" as const;
 
 export function mapExpenseRow(row: ExpenseDbRow): HistoryItem {
   return {
     id: row.id,
     kind: "expense",
     amount: parseNumeric(row.amount),
-    usd: mapUsd(row),
+    snapshot: mapSnapshot(row),
+    accountId: row.account_id ?? null,
     occurredOn: row.occurred_on,
     createdAt: row.created_at,
     categoryId: row.category_id,
@@ -61,7 +65,8 @@ export function mapIncomeRow(row: IncomeDbRow): HistoryItem {
     id: row.id,
     kind: "income",
     amount: parseNumeric(row.amount),
-    usd: mapUsd(row),
+    snapshot: mapSnapshot(row),
+    accountId: row.account_id ?? null,
     occurredOn: row.occurred_on,
     createdAt: row.created_at,
     categoryId: null,
@@ -71,7 +76,7 @@ export function mapIncomeRow(row: IncomeDbRow): HistoryItem {
   };
 }
 
-function parseChannel(
+export function parseChannel(
   raw: string,
   fallback: HistoryChannel,
 ): HistoryChannel {
@@ -79,28 +84,38 @@ function parseChannel(
   return fallback;
 }
 
-/** Old rows read as BYN: absent/null snapshot columns mean native BYN. */
-function mapUsd(row: {
+/**
+ * Native snapshot for a non-BYN row. Old rows read as BYN: absent/null
+ * snapshot columns mean native BYN.
+ */
+export function mapSnapshot(row: {
   currency?: string | null;
   original_amount?: string | number | null;
   fx_rate?: string | number | null;
-}): UsdSnapshot | null {
-  if (row.currency !== "USD") return null;
+}): AmountSnapshot | null {
+  const currency = snapshotCurrency(row.currency);
+  if (!currency) return null;
   if (row.original_amount == null || row.fx_rate == null) return null;
   const originalAmount = parseNumeric(row.original_amount);
   // Rates keep four fraction digits (numeric(12,4)) — never round to 2.
   const fxRate = parseRate(row.fx_rate);
   if (originalAmount <= 0 || fxRate <= 0) return null;
-  return { originalAmount, fxRate };
+  return { currency, originalAmount, fxRate };
 }
 
-function parseRate(value: string | number): number {
+function snapshotCurrency(
+  raw: string | null | undefined,
+): RateCurrency | null {
+  return raw === "USD" || raw === "EUR" ? raw : null;
+}
+
+export function parseRate(value: string | number): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return 0;
   return Math.round(Number(`${n}e4`)) / 10_000;
 }
 
-function parseNumeric(value: string | number): number {
+export function parseNumeric(value: string | number): number {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100) / 100;

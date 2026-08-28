@@ -21,6 +21,10 @@ export function isAuthPublicPath(pathname: string): boolean {
   if (pathname === "/api/telegram" || pathname.startsWith("/api/telegram/")) {
     return true;
   }
+  // PWA install reads the manifest without a cookie session.
+  if (pathname === "/manifest.webmanifest") {
+    return true;
+  }
   return false;
 }
 

@@ -1,25 +1,38 @@
 import { CategoriesManage } from "@/components/categories-manage";
 import { IconArrowLeft } from "@/components/icons";
+import Link from "next/link";
 import { AccountSection } from "@/components/settings/account-section";
+import { AccountsManage } from "@/components/settings/accounts-manage";
 import { FxRateSection } from "@/components/settings/fx-rate-section";
+import { listAccounts } from "@/lib/accounts/load-accounts";
 import { loadCategoriesForManage } from "@/lib/categories/load-categories";
-import { getEffectiveRate } from "@/lib/fx";
+import { getEffectiveRate, RATE_CURRENCIES } from "@/lib/fx";
 import { formatActiveRateLine } from "@/lib/fx/format";
 import { createClient } from "@/lib/supabase/server";
 import { userFromGetUserResult } from "@/lib/supabase/session-user";
-import Link from "next/link";
 
 /**
- * Settings (ADR-0013): single scrollable page — Fx rate / Categories / Account.
- * Entry point is the gear icon on Home; the standalone categories route is gone.
+ * Settings (ADR-0013 / ADR-0014): Fx rates per Currency / Accounts / Categories.
+ * Entry point is the gear icon on Home.
  */
 export default async function SettingsPage() {
   const supabase = await createClient();
   const user = userFromGetUserResult(await supabase.auth.getUser());
 
-  const [categories, effective] = await Promise.all([
+  const [categories, accounts, rateEntries] = await Promise.all([
     loadCategoriesForManage(),
-    getEffectiveRate(),
+    listAccounts(),
+    Promise.all(
+      RATE_CURRENCIES.map(async (currency) => {
+        const effective = await getEffectiveRate(currency);
+        return {
+          currency,
+          effective,
+          activeLine: effective ? formatActiveRateLine(currency, effective) : null,
+          source: effective?.source ?? null,
+        };
+      }),
+    ),
   ]);
 
   return (
@@ -36,14 +49,23 @@ export default async function SettingsPage() {
         </h1>
       </header>
 
-      <section aria-label="Курс доллара" className="mt-4 px-4">
-        <FxRateSection
-          activeLine={
-            effective ? formatActiveRateLine(effective) : null
-          }
-          source={effective?.source ?? null}
-        />
+      <section aria-label="Счета" className="mt-4 px-4">
+        <AccountsManage accounts={accounts} />
       </section>
+
+      {rateEntries.map(({ currency, activeLine, source }) => (
+        <section
+          key={currency}
+          aria-label={`Курс ${currency === "USD" ? "доллара" : "евро"}`}
+          className="mt-6 px-4"
+        >
+          <FxRateSection
+            currency={currency}
+            activeLine={activeLine}
+            source={source}
+          />
+        </section>
+      ))}
 
       <section aria-label="Категории" className="mt-6 border-t border-line pt-4">
         <CategoriesManage initialCategories={categories} />

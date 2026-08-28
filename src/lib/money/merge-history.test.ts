@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { HistoryItem } from "./history-types";
+import type { HistoryEntry, HistoryItem } from "./history-types";
 import { mergeHistory } from "./merge-history";
 
 function item(
@@ -12,13 +12,15 @@ function item(
     categoryDisplayName: partial.kind === "expense" ? "Прочее" : null,
     note: null,
     channel: "manual",
+    snapshot: null,
+    accountId: null,
     ...partial,
   };
 }
 
 describe("mergeHistory", () => {
   it("returns empty list when both sides are empty", () => {
-    expect(mergeHistory([], [])).toEqual([]);
+    expect(mergeHistory([])).toEqual([]);
   });
 
   it("mixes Expenses and Incomes ordered by Occurred on descending", () => {
@@ -47,7 +49,7 @@ describe("mergeHistory", () => {
       }),
     ];
 
-    const merged = mergeHistory(expenses, incomes);
+    const merged = mergeHistory([...expenses, ...incomes]);
     expect(merged.map((r) => r.id)).toEqual(["e-late", "i-mid", "e-early"]);
   });
 
@@ -69,7 +71,7 @@ describe("mergeHistory", () => {
       }),
     ];
 
-    expect(mergeHistory(expenses, incomes).map((r) => r.id)).toEqual([
+    expect(mergeHistory([...expenses, ...incomes]).map((r) => r.id)).toEqual([
       "i-new",
       "e-old",
     ]);

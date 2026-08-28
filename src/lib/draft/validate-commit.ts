@@ -6,6 +6,7 @@ export type CommitRejection =
   | "amount_required"
   | "amount_too_large"
   | "currency_rate_unavailable"
+  | "account_not_found"
   | "date_required"
   | "category_required"
   | "note_too_long"
@@ -14,13 +15,15 @@ export type CommitRejection =
 export type CommitValidation =
   | {
       ok: true;
-      /** Canonical BYN amount for storage and all aggregates. */
+      /** Canonical BYN amount for storage and cross-Account aggregates. */
       amount: number;
-      /** Amount exactly as typed (USD drafts keep the typed figure). */
+      /** Amount exactly as typed (USD/EUR drafts keep the typed figure). */
       originalAmount: number;
       currency: DraftCurrency;
-      /** Rate used for USD→BYN; null for native-BYN rows. */
+      /** Rate used for X→BYN; null for native-BYN rows. */
       fxRate: number | null;
+      /** Owning Account (ADR-0014). */
+      accountId: string;
       occurredOn: string;
       categoryId: string | null;
       note: string | null;
@@ -58,12 +61,12 @@ export function roundHalfUp2(value: number): number {
 export type CommitFx = { rate: number };
 
 /**
- * Commit minimum validity (ADR-0003 + ADR-0013):
+ * Commit minimum validity (ADR-0003 + ADR-0013 + ADR-0014):
  * - Expense: Amount > 0 + Occurred on + Category
  * - Income: Amount > 0 + Occurred on
  * Channel is not user-edited; photo forbidden for Income.
- * Limits apply to the canonical amount; a USD draft converts to canonical BYN
- * half-up at the injected rate, fixed once at Commit/Edit-save.
+ * Limits apply to the amount as typed; a USD/EUR Draft converts to canonical
+ * BYN half-up at the injected rate, fixed once at Commit/Edit-save.
  */
 export function validateCommit(
   draft: Draft,
@@ -88,7 +91,7 @@ export function validateCommit(
   const currency: DraftCurrency = draft.currency ?? "BYN";
   let canonical = amount;
   let fxRate: number | null = null;
-  if (currency === "USD") {
+  if (currency !== "BYN") {
     const rate = fx?.rate;
     if (rate == null || !Number.isFinite(rate) || rate <= 0) {
       return { ok: false, reason: "currency_rate_unavailable" };
@@ -116,6 +119,7 @@ export function validateCommit(
       originalAmount: amount,
       currency,
       fxRate,
+      accountId: draft.accountId ?? "",
       occurredOn,
       categoryId,
       note: normalizeNote(draft.note),
@@ -128,6 +132,7 @@ export function validateCommit(
     originalAmount: amount,
     currency,
     fxRate,
+    accountId: draft.accountId ?? "",
     occurredOn,
     categoryId: null,
     note: normalizeNote(draft.note),

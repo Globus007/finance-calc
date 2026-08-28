@@ -37,6 +37,7 @@ describe("validateCommit", () => {
       occurredOn: "2026-08-05",
       categoryId: "cat-1",
       note: null,
+      accountId: "",
     });
   });
 
@@ -50,6 +51,7 @@ describe("validateCommit", () => {
       occurredOn: "2026-08-05",
       categoryId: null,
       note: "зарплата",
+      accountId: "",
     });
   });
 
@@ -150,6 +152,7 @@ describe("validateCommit with currency (ADR-0013)", () => {
         occurredOn: "2026-08-05",
         categoryId: "cat-1",
         note: null,
+        accountId: "",
       });
     },
   );

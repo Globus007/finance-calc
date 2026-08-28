@@ -1,20 +1,29 @@
-/** Committed History row for read surfaces (Home, History, Month). */
+import type { Currency, RateCurrency } from "@/lib/fx";
 
-export type HistoryKind = "expense" | "income";
+/** Kinds shown in History. Transfers never enter Monthly totals (ADR-0014). */
+export type HistoryKind = "expense" | "income" | "transfer";
 
 export type HistoryChannel = "photo" | "voice" | "manual";
 
-/**
- * One committed Expense or Income in the mixed History list.
- * Drafts never appear here.
- */
+/** Snapshot kept on committed records entered in USD / EUR (ADR-0013/#85). */
+export type AmountSnapshot = {
+  currency: RateCurrency;
+  /** Amount as originally typed, in its Currency. */
+  originalAmount: number;
+  /** X→BYN rate fixed at Commit / Edit-save. */
+  fxRate: number;
+};
+
+/** One committed Expense or Income in the mixed History list. */
 export type HistoryItem = {
   id: string;
-  kind: HistoryKind;
-  /** BYN amount (> 0); canonical, drives all aggregates. */
+  kind: "expense" | "income";
+  /** Canonical BYN amount (> 0); drives cross-Account aggregates. */
   amount: number;
-  /** Present only when entered in USD: original typed amount + rate (ADR-0013). */
-  usd?: UsdSnapshot | null;
+  /** Present when the record was typed in USD/EUR (legacy BYN till rows too). */
+  snapshot: AmountSnapshot | null;
+  /** Owning Account; null only for pre-migration rows without a till. */
+  accountId: string | null;
   /** Occurred on as YYYY-MM-DD. */
   occurredOn: string;
   /** Commit time (ISO); tie-break for sort only. */
@@ -27,7 +36,28 @@ export type HistoryItem = {
   channel: HistoryChannel;
 };
 
-/** Live Monthly total for one calendar month (ADR-0004). */
+/** One committed Transfer in the mixed History list (third kind). */
+export type TransferItem = {
+  id: string;
+  kind: "transfer";
+  /** Canonical sort key (= movedOn). */
+  occurredOn: string;
+  createdAt: string;
+  note: string | null;
+  /** Amount as typed, in the source Account's Currency. */
+  amount: number;
+  /** Figure the target Account received, in the target Account's Currency. */
+  convertedAmount: number;
+  /** Implied source→target rate fixed at the moment of the move. */
+  fxRate: number;
+  sourceAccountId: string;
+  targetAccountId: string;
+};
+
+/** Anything that appears in History. */
+export type HistoryEntry = HistoryItem | TransferItem;
+
+/** Live totals for one calendar month (native or BYN aggregate). */
 export type MonthlyTotal = {
   expenseTotal: number;
   incomeTotal: number;
@@ -35,10 +65,23 @@ export type MonthlyTotal = {
   net: number;
 };
 
-/** Snapshot kept on committed records entered in USD (ADR-0013). */
-export type UsdSnapshot = {
-  /** Amount as originally typed, in USD. */
-  originalAmount: number;
-  /** USD→BYN rate fixed at Commit / Edit-save. */
-  fxRate: number;
+export const EMPTY_TOTALS: MonthlyTotal = {
+  expenseTotal: 0,
+  incomeTotal: 0,
+  net: 0,
 };
+
+/**
+ * Amount of an Expense/Income in the Currency it should be displayed and
+ * summed in for one Account: native for a USD/EUR till, canonical BYN for a
+ * BYN till (legacy rows typed in $ inside the old single till stay BYN here).
+ */
+export function nativeAmount(
+  item: HistoryItem,
+  accountCurrency: Currency,
+): number {
+  if (accountCurrency !== "BYN" && item.snapshot) {
+    return item.snapshot.originalAmount;
+  }
+  return item.amount;
+}

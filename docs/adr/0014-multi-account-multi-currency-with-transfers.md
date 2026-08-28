@@ -1,33 +1,94 @@
-# ADR-0014: Accounts in their own currencies, with Transfers between them
+# ADR-0014: Multi-account, multi-currency Accounts with Transfers
 
 Date: 2026-08-27
 Status: accepted
-Spec: issue #85 (grilling-settled decisions in-session)
+Spec: issue #85 (grilling-settled decisions in-session, rounds Q1–Q20)
 
 ## Context
 
-The app is a single till: one BYN Opening, one Remainder, and every Expense/Income in canonical BYN (ADR-0012, ADR-0013). The user actually keeps money in several places and in different currencies and wants to track each place in its own currency, plus move money between them. ADR-0013 explicitly deferred "multi-currency accounts, wallets, or balances"; this decision reverses that and replaces the «single till» positioning.
+The app is a single BYN till: one Opening, one Remainder, one set of monthly
+totals. Real users keep money in several places and currencies — BYN cash, USD
+on a card, EUR in a savings account. Paying from the USD card forces a manual
+pre-conversion that loses the original figure, and moving money between own
+places can only be recorded as a fake income or expense, which corrupts both
+Monthly totals and Remainder.
+
+ADR-0013 already established the two properties this decision depends on:
+canonical BYN storage with a native snapshot fixed at Commit, and one FX seam
+that resolves an effective rate lazily per day with a manual override.
 
 ## Decision
 
-**Accounts.** A named till with one Currency fixed at creation (BYN, USD, or EUR). Every committed Expense and Income belongs to exactly one Account; a Transfer belongs to two (source and target). Opening, Remainder, and Monthly totals are per-Account. Accounts can be created and renamed; an Account can be deleted only when no committed record references it, and at least one Account always exists. The default Account receives fast capture (photo/voice/bot); manual capture chooses explicitly. Existing single-till data auto-migrates to a default BYN Account «Наличные»; new users get the same default.
+**Accounts are first-class named tills, each with one fixed Currency.**
+`accounts (owner_id, name, currency ∈ {BYN, USD, EUR}, is_default)`. Currency is
+chosen at creation and never changed afterwards — changing it would silently
+re-label every existing record in the till. Every committed Expense and Income
+names exactly one Account via `account_id` (`on delete restrict`, NOT NULL after
+backfill), so a till with records cannot be deleted. Exactly one Account per
+owner is the default (partial unique index); the first Account of an owner is
+always the default, and deleting the default promotes another. At least one
+Account always exists (delete trigger). New users get «Наличные» (BYN, default)
+from the same `auth.users` insert trigger that seeds Categories; existing data
+migrates to it.
 
-**Currencies.** Fixed set {BYN, USD, EUR}. Currency is fixed at Account creation — changing Currency means a new Account, never a re-conversion of history.
+**Currency is a property of the Account, not of the record's form.** There is no
+per-record currency picker: the Amount is typed in the Account's Currency, and a
+DB trigger keeps `expenses.currency` / `incomes.currency` equal to their
+Account's Currency. The ADR-0013 snapshot columns stay exactly as they are
+(`currency`, `original_amount`, `fx_rate`), only widened to accept EUR.
 
-**Storage.** Canonical BYN storage is preserved (ADR-0013 generalized): every record converts once at Commit/Edit-save at the effective Fx rate and keeps a native snapshot (Currency, original Amount, rate). Per-account figures use native snapshots (exact); cross-account aggregates convert per-Account figures to BYN at read and are labeled approximate («≈»). The FX seam generalizes to effective USD→BYN and EUR→BYN rates (NBRB, lazy daily cache, per-currency override).
+**Canonical BYN storage is preserved.** Conversion still happens once, at Commit
+and at Edit-save, at the effective rate for that Currency; per-Account figures
+are computed from the native snapshot and are exact in the Account's Currency;
+cross-Account figures are computed at read from the current rate and are always
+labeled «≈». Per-record history never re-converts.
 
-**Transfers.** A source → target move between own Accounts: Amount in the source Account's Currency, converted to the target at the effective rate at the moment of the move, with Occurred on and optional Note. A committed Transfer is History's third kind; it changes no Monthly total and no cross-account aggregate (own money moving between own Accounts changes no totals). Manual only, not Draft → Commit; Edit/Delete recalculate both Accounts' Remainders live. Validation: Amount > 0, source ≠ target, no balance check (a source Remainder may go negative).
+**Opening and Remainder become per-Account.** `openings` is keyed
+`(owner_id, account_id)` and its amount is in the Account's Currency. Per-Account
+Remainder is exact in that Currency (Opening + Incomes − Expenses ± Transfers
+on or after the Opening date); the all-Account figure is a BYN aggregate at
+read («≈»). An Account without an Opening has no Remainder (absent, not zero),
+and contributes nothing to the aggregate.
 
-**Aggregates.** All cross-account figures are BYN and approximate («≈»): the Home Remainder aggregate and the Month cross-account line. The aggregate is absent until at least one Account has an Opening; Accounts without an Opening are excluded.
+**Monthly totals become per-Account**, exact in the Account's Currency, plus one
+BYN «≈» aggregate line. Transfers are excluded from Monthly totals and from the
+aggregate, so a move never changes total wealth.
 
-**Edit.** Changing an Account on a record: same Currency leaves the Amount unchanged; a different Currency prefills the converted Amount («≈») for confirmation or adjustment.
+**Transfers are a third History kind, not a pair of records.**
+`transfers (owner_id, source_account_id, target_account_id, amount,
+converted_amount, fx_rate, moved_on, note)` — Amount typed in the source
+Currency, converted once at the rate effective at the moment of the move, with
+the implied source→target rate stored on the row. `source <> target` is a DB
+check; both FKs are `on delete restrict`. A Transfer is a direct user action:
+manual only, no Draft → Commit pipeline, no bot capture, no Channel. Edit and
+Delete recalculate both Accounts' Remainders. A Note/date-only Edit keeps the
+rate fixed at the move. No balance check — Remainder may go negative.
 
-**Surfaces.** Account management lives in Settings (create/rename/delete, default choice); per-Account Set Opening on the Account card on Home.
+**FX generalizes per Currency rather than adding a second seam.** `fx_rates` is
+keyed `(owner_id, currency)` with currency ∈ {USD, EUR}; `getEffectiveRate()`
+and `setRateOverride()` take the Currency. Same resolution order (override >
+fresh daily cache > lazy NBRB > stale cache), same TTL, same per-Currency
+override. A cross-Currency Transfer derives its rate from the two BYN rates
+(`rate_source→BYN / rate_target→BYN`), so BYN↔USD, BYN↔EUR and USD↔EUR all work
+without a third rate row.
+
+**Capture stays one-step.** Photo, voice, and bot Commit to the default Account
+(no picker on those surfaces); manual capture shows an Account picker on confirm.
+Settings gains an Accounts section: list, create, rename, delete-only-when-empty,
+choose default.
 
 ## Consequences
 
-- The «single till» positioning (PRODUCT.md) is deliberately replaced by a multi-account model; CONTEXT.md gains Account and Transfer and per-account semantics, and drops the per-Draft Currency picker and the "no multi-currency" constraints.
-- Records keep commit-time canonical BYN, so per-record history never re-converts; only cross-account aggregates convert at read, always labeled «≈».
-- ADR-0013's USD-only snapshot generalizes to EUR; its "no multi-currency accounts" and "no compute-on-read" stances are superseded for aggregates (recorded figures still never re-convert).
-- Voice/photo/bot capture targets the default Account and so needs no new capture affordance; the bot stays Expense-only and gets no Transfers.
-- Transfers are deliberately excluded from Monthly totals and the aggregate; there is no balance check.
+- Per-Account figures are honest in their own Currency; every mixed figure is
+  visibly approximate, which is the price of a single-number overview.
+- The default Account is a routing rule for fast capture, not a container for
+  misfiled records: manual capture always names an Account explicitly.
+- Widening `openings` to a composite PK and `fx_rates` to per-Currency rows is a
+  rewrite of those tables inside one migration; both are small and fully
+  backfilled from existing rows.
+- Transfer conversion is fixed at the moment of the move, so a later rate change
+  never rewrites history — and never re-balances the two Accounts either.
+- Out of scope by design: changing an Account's Currency, hiding Accounts,
+  balance checks on Transfer, Transfers in the bot, rate history / charts /
+  scheduled refresh, per-Draft currency picker, portfolio tracking beyond
+  Remainder, any change to Categories or the extraction pipeline.

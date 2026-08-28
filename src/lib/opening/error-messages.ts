@@ -11,6 +11,7 @@ const MESSAGES: Record<SetOpeningActionError, string> = {
   amount_too_large: "Сумма не больше 9 999 999 999,99.",
   date_required: "Укажите корректную дату старта.",
   date_after_tomorrow: "Дата старта не позже завтра.",
+  account_not_found: "Счёт не найден. Выберите счёт заново.",
   unauthenticated: "Войдите в аккаунт, чтобы задать старт.",
   unavailable: "Не удалось сохранить старт. Попробуйте ещё раз.",
 };

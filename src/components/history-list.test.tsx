@@ -18,6 +18,8 @@ function expense(partial: Partial<HistoryItem> = {}): HistoryItem {
     categoryDisplayName: "Продукты",
     note: "Евроопт",
     channel: "photo",
+    snapshot: null,
+    accountId: "acc-1",
     ...partial,
   };
 }
@@ -33,20 +35,22 @@ function income(partial: Partial<HistoryItem> = {}): HistoryItem {
     categoryDisplayName: null,
     note: "Зарплата",
     channel: "manual",
+    snapshot: null,
+    accountId: "acc-1",
     ...partial,
   };
 }
 
 describe("HistoryList", () => {
   it("shows empty Russian copy when there are no committed items", () => {
-    render(<HistoryList items={[]} />);
+    render(<HistoryList entries={[]} />);
     expect(
       screen.getByText(/Пока нет записей/i),
     ).toBeInTheDocument();
   });
 
   it("renders mixed Expenses and Incomes with Russian labels", () => {
-    render(<HistoryList items={[expense(), income()]} />);
+    render(<HistoryList entries={[expense(), income()]} />);
 
     expect(screen.getByText("Продукты")).toBeInTheDocument();
     expect(screen.getByText("Зарплата")).toBeInTheDocument();
@@ -58,7 +62,7 @@ describe("HistoryList", () => {
   });
 
   it("links each row to Edit / Delete for that committed record", () => {
-    render(<HistoryList items={[expense(), income()]} />);
+    render(<HistoryList entries={[expense(), income()]} />);
 
     expect(
       screen.getByRole("link", { name: /Редактировать расход Продукты/i }),
@@ -69,14 +73,43 @@ describe("HistoryList", () => {
   });
 });
 
+describe("HistoryList mixed view (ADR-0014)", () => {
+  const usdAccount = {
+    id: "acc-1",
+    name: "Доллары",
+    currency: "USD" as const,
+    isDefault: false,
+  };
+
+  it("labels all-Account rows with canonical ≈ BYN", () => {
+    render(
+      <HistoryList
+        entries={[
+          expense({
+            amount: 165,
+            snapshot: { currency: "USD", originalAmount: 50, fxRate: 3.3012 },
+          }),
+        ]}
+        accountById={{ "acc-1": usdAccount }}
+        showAccountNames
+      />,
+    );
+
+    expect(screen.getByText(/≈/)).toBeInTheDocument();
+    expect(screen.getByText(/165/)).toBeInTheDocument();
+    expect(screen.getByText(/\$50 · по 3,30/)).toBeInTheDocument();
+    expect(screen.getByText(/Доллары/)).toBeInTheDocument();
+  });
+});
+
 describe("HistoryList USD badge (ADR-0013)", () => {
   it("shows the original $ amount and rate for records entered in USD", () => {
     render(
       <HistoryList
-        items={[
+        entries={[
           expense({
             amount: 165,
-            usd: { originalAmount: 50, fxRate: 3.3012 },
+            snapshot: { currency: "USD", originalAmount: 50, fxRate: 3.3012 },
           }),
         ]}
       />,
@@ -86,7 +119,7 @@ describe("HistoryList USD badge (ADR-0013)", () => {
   });
 
   it("shows no badge for native BYN records", () => {
-    render(<HistoryList items={[expense()]} />);
+    render(<HistoryList entries={[expense()]} />);
 
     expect(screen.queryByText(/· по /)).not.toBeInTheDocument();
   });

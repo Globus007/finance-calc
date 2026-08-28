@@ -4,17 +4,21 @@ import {
 } from "@/lib/categories/map-row";
 import { sortCategoriesForManage } from "@/lib/categories/sort-categories";
 import type { CategoryPickerItem } from "@/lib/categories/types";
-import type { UsdSnapshot } from "./history-types";
+import type { Account } from "@/lib/accounts/types";
+import type { AmountSnapshot } from "./history-types";
 import { createClient } from "@/lib/supabase/server";
 import { categoriesForExpenseEdit } from "./edit-categories";
 import type { EditRecordPageData, EditableRecord } from "./edit-types";
 import type { HistoryChannel } from "./history-types";
+import { listAccounts } from "@/lib/accounts/load-accounts";
+import { getEffectiveRates } from "@/lib/fx";
+import { mapSnapshot, parseChannel, parseNumeric } from "./map-row";
 
 const EXPENSE_EDIT_SELECT =
-  "id, amount, occurred_on, note, channel, category_id, currency, original_amount, fx_rate" as const;
+  "id, amount, occurred_on, note, channel, category_id, account_id, currency, original_amount, fx_rate" as const;
 
 const INCOME_EDIT_SELECT =
-  "id, amount, occurred_on, note, channel, currency, original_amount, fx_rate" as const;
+  "id, amount, occurred_on, note, channel, account_id, currency, original_amount, fx_rate" as const;
 
 type ExpenseEditRow = {
   id: string;
@@ -23,6 +27,7 @@ type ExpenseEditRow = {
   note: string | null;
   channel: string;
   category_id: string;
+  account_id?: string | null;
   currency?: string | null;
   original_amount?: string | number | null;
   fx_rate?: string | number | null;
@@ -34,13 +39,15 @@ type IncomeEditRow = {
   occurred_on: string;
   note: string | null;
   channel: string;
+  account_id?: string | null;
   currency?: string | null;
   original_amount?: string | number | null;
   fx_rate?: string | number | null;
 };
 
 /**
- * Load one committed record for Edit, plus Expense Category picker options.
+ * Load one committed record for Edit, plus Expense Category picker options and
+ * the Account picker (with the rates the «≈» prefill needs).
  * Returns null when unauthenticated, kind invalid, or row missing.
  */
 export async function loadEditRecord(
@@ -56,6 +63,8 @@ export async function loadEditRecord(
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  const accounts = await listAccounts();
+
   if (kind === "expense") {
     const { data, error } = await supabase
       .from("expenses")
@@ -66,11 +75,11 @@ export async function loadEditRecord(
     if (error || !data) return null;
     const row = data as ExpenseEditRow;
     const record = mapExpenseEdit(row);
-    const categories = await loadExpenseEditCategories(
-      supabase,
-      row.category_id,
-    );
-    return { record, categories };
+    const [categories, rates] = await Promise.all([
+      loadExpenseEditCategories(supabase, row.category_id),
+      ratesForEdit(record, accounts),
+    ]);
+    return { record, categories, accounts, rates };
   }
 
   const { data, error } = await supabase
@@ -80,13 +89,27 @@ export async function loadEditRecord(
     .maybeSingle();
 
   if (error || !data) return null;
+  const record = mapIncomeEdit(data as IncomeEditRow);
   return {
-    record: mapIncomeEdit(data as IncomeEditRow),
+    record,
     categories: [],
+    accounts,
+    rates: await ratesForEdit(record, accounts),
   };
 }
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Rates the Edit form needs: only when the record (or one of the Accounts it
+ * could move to) is non-BYN. BYN-only setups never touch NBRB (ADR-0013).
+ */
+async function ratesForEdit(record: EditableRecord, accounts: Account[]) {
+  const needsRates =
+    record.snapshot !== null || accounts.some((a) => a.currency !== "BYN");
+  if (!needsRates) return {};
+  return getEffectiveRates();
+}
 
 async function loadExpenseEditCategories(
   supabase: SupabaseServer,
@@ -118,11 +141,12 @@ function mapExpenseEdit(row: ExpenseEditRow): EditableRecord {
     id: row.id,
     kind: "expense",
     amount: parseNumeric(row.amount),
-    usd: mapUsdEdit(row),
+    snapshot: mapSnapshot(row),
+    accountId: row.account_id ?? null,
     occurredOn: row.occurred_on,
     categoryId: row.category_id,
     note: row.note,
-    channel: parseChannel(row.channel),
+    channel: parseChannel(row.channel, "manual"),
   };
 }
 
@@ -131,43 +155,11 @@ function mapIncomeEdit(row: IncomeEditRow): EditableRecord {
     id: row.id,
     kind: "income",
     amount: parseNumeric(row.amount),
-    usd: mapUsdEdit(row),
+    snapshot: mapSnapshot(row),
+    accountId: row.account_id ?? null,
     occurredOn: row.occurred_on,
     categoryId: null,
     note: row.note,
-    channel: parseChannel(row.channel),
+    channel: parseChannel(row.channel, "manual"),
   };
 }
-
-function parseChannel(raw: string): HistoryChannel {
-  if (raw === "photo" || raw === "voice" || raw === "manual") return raw;
-  return "manual";
-}
-
-/** Old rows read as BYN: absent/null snapshot columns mean native BYN. */
-function mapUsdEdit(row: {
-  currency?: string | null;
-  original_amount?: string | number | null;
-  fx_rate?: string | number | null;
-}): UsdSnapshot | null {
-  if (row.currency !== "USD") return null;
-  if (row.original_amount == null || row.fx_rate == null) return null;
-  const originalAmount = parseNumeric(row.original_amount);
-  // Rates keep four fraction digits (numeric(12,4)) — never round to 2.
-  const fxRate = parseRate(row.fx_rate);
-  if (originalAmount <= 0 || fxRate <= 0) return null;
-  return { originalAmount, fxRate };
-}
-
-function parseRate(value: string | number): number {
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(Number(`${n}e4`)) / 10_000;
-}
-
-function parseNumeric(value: string | number): number {
-  const n = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(n)) return 0;
-  return Math.round(n * 100) / 100;
-}
-

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { HistoryList } from "@/components/history-list";
+import type { Account } from "@/lib/accounts/types";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import {
   DEFAULT_HISTORY_FILTERS,
@@ -10,27 +11,43 @@ import {
   type HistoryFilterKind,
   type HistoryFilters,
 } from "@/lib/money/filter-history";
-import type { HistoryItem } from "@/lib/money/history-types";
+import type { HistoryEntry } from "@/lib/money/history-types";
 
 const EMPTY_ALL =
   "Пока нет записей. Добавьте расход или доход через панель захвата.";
 const EMPTY_FILTERED = "Нет записей по выбранным фильтрам.";
 
 type Props = {
-  items: HistoryItem[];
+  items: HistoryEntry[];
   categories: CategoryPickerItem[];
+  /** Accounts for the «Счёт» filter (also names rows in the mixed list). */
+  accounts?: Account[];
+  /** Prefill from Home «Все» (`?acc=`). */
+  initialAccountId?: string | null;
 };
 
 /**
  * History surface filters (kind, Category, Occurred on range) + list.
  * Filters are client-only over the load-all list; Edit/Delete links stay on rows.
  */
-export function HistoryPanel({ items, categories }: Props) {
-  const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
+export function HistoryPanel({
+  items,
+  categories,
+  accounts = [],
+  initialAccountId = null,
+}: Props) {
+  const [filters, setFilters] = useState<HistoryFilters>(() => ({
+    ...DEFAULT_HISTORY_FILTERS,
+    accountId: initialAccountId,
+  }));
 
   const filtered = useMemo(
     () => filterHistory(items, filters),
     [items, filters],
+  );
+  const accountById = useMemo(
+    () => Object.fromEntries(accounts.map((a) => [a.id, a])),
+    [accounts],
   );
   const active = hasActiveHistoryFilters(filters);
   const emptyMessage =
@@ -40,8 +57,15 @@ export function HistoryPanel({ items, categories }: Props) {
     setFilters((prev) => ({
       ...prev,
       kind,
-      // Income has no Category — drop category when switching to Income only.
-      categoryId: kind === "income" ? null : prev.categoryId,
+      // Income and Transfer have no Category — drop it when they are alone.
+      categoryId: kind === "income" || kind === "transfer" ? null : prev.categoryId,
+    }));
+  }
+
+  function setAccountId(accountId: string) {
+    setFilters((prev) => ({
+      ...prev,
+      accountId: accountId === "" ? null : accountId,
     }));
   }
 
@@ -70,7 +94,7 @@ export function HistoryPanel({ items, categories }: Props) {
     setFilters(DEFAULT_HISTORY_FILTERS);
   }
 
-  const categoryDisabled = filters.kind === "income";
+  const categoryDisabled = filters.kind === "income" || filters.kind === "transfer";
   const categorySelected = filters.categoryId != null && !categoryDisabled;
 
   return (
@@ -81,7 +105,7 @@ export function HistoryPanel({ items, categories }: Props) {
       >
         <p className="ui-kicker">Тип</p>
         <div
-          className="mt-1.5 grid grid-cols-3 gap-1 rounded-lg bg-surface p-1"
+          className="mt-1.5 grid grid-cols-4 gap-1 rounded-lg bg-surface p-1"
           role="group"
           aria-label="Тип записи"
         >
@@ -100,7 +124,30 @@ export function HistoryPanel({ items, categories }: Props) {
             onClick={() => setKind("income")}
             label="Доходы"
           />
+          <KindButton
+            active={filters.kind === "transfer"}
+            onClick={() => setKind("transfer")}
+            label="Переводы"
+          />
         </div>
+
+        {accounts.length > 0 ? (
+          <label className="mt-3 block">
+            <span className="ui-kicker">Счёт</span>
+            <select
+              value={filters.accountId ?? ""}
+              onChange={(e) => setAccountId(e.target.value)}
+              className="ui-field mt-1.5"
+            >
+              <option value="">Все счета</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
         <label className="mt-3 block">
           <span className="ui-kicker">Категория</span>
@@ -121,7 +168,7 @@ export function HistoryPanel({ items, categories }: Props) {
         </label>
         {categoryDisabled ? (
           <p className="mt-1 text-[11px] text-ink-muted">
-            У доходов нет категории.
+            У доходов и переводов нет категории.
           </p>
         ) : categorySelected ? (
           <p className="mt-1 text-[11px] text-ink-muted">
@@ -164,7 +211,12 @@ export function HistoryPanel({ items, categories }: Props) {
         ) : null}
       </section>
 
-      <HistoryList items={filtered} emptyMessage={emptyMessage} />
+      <HistoryList
+        entries={filtered}
+        accountById={accountById}
+        showAccountNames={filters.accountId === null}
+        emptyMessage={emptyMessage}
+      />
     </div>
   );
 }
