@@ -77,6 +77,16 @@ select tests.create_user(
   'open-a@example.com'
 );
 
+-- SECURITY DEFINER: reads the owner's default Account (ADR-0014) for inserts.
+create or replace function tests.account_id(p_uid uuid)
+returns uuid
+language sql
+security definer
+set search_path = public
+as $$
+  select id from public.accounts where owner_id = p_uid and is_default limit 1;
+$$;
+
 select tests.create_user(
   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
   'open-b@example.com'
@@ -92,9 +102,10 @@ select ok(
   'RLS enabled on openings'
 );
 
-insert into public.openings (owner_id, amount, opened_on)
+insert into public.openings (owner_id, account_id, amount, opened_on)
 values (
   'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+  tests.account_id('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid),
   80.00,
   current_date
 );
@@ -103,9 +114,10 @@ select tests.as_user('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid);
 
 select lives_ok(
   $sql$
-    insert into public.openings (owner_id, amount, opened_on)
+    insert into public.openings (owner_id, account_id, amount, opened_on)
     values (
       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      tests.account_id('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid),
       0,
       current_date
     )
@@ -155,9 +167,10 @@ where owner_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid;
 
 select throws_ok(
   $sql$
-    insert into public.openings (owner_id, amount, opened_on)
+    insert into public.openings (owner_id, account_id, amount, opened_on)
     values (
       'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+      tests.account_id('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid),
       1,
       current_date
     )
@@ -204,9 +217,10 @@ select is(
 
 select throws_ok(
   $sql$
-    insert into public.openings (owner_id, amount, opened_on)
+    insert into public.openings (owner_id, account_id, amount, opened_on)
     values (
       'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid,
+      tests.account_id('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'::uuid),
       -1,
       current_date
     )
@@ -218,16 +232,17 @@ select throws_ok(
 
 select throws_ok(
   $sql$
-    insert into public.openings (owner_id, amount, opened_on)
+    insert into public.openings (owner_id, account_id, amount, opened_on)
     values (
       'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid,
+      tests.account_id('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'::uuid),
       5,
       current_date
     )
   $sql$,
   '23505',
   null,
-  'one Opening row per owner'
+  'one Opening row per (owner, Account)'
 );
 
 select * from finish();

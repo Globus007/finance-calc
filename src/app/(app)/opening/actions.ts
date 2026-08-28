@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { loadAccount } from "@/lib/accounts/load-accounts";
 import { todayInMinsk, tomorrowInMinsk } from "@/lib/dates/minsk-today";
 import type { SetOpeningActionError } from "@/lib/opening/error-messages";
 import type { SetOpeningInput } from "@/lib/opening/types";
@@ -24,8 +25,9 @@ async function requireUser() {
 }
 
 /**
- * Write or replace the user's single Opening (not Draft → Commit).
- * Revalidates Home only — Month does not show Remainder.
+ * Write or replace one Account's Opening (not Draft → Commit). The amount is
+ * typed in that Account's Currency. Revalidates Home only — Month does not
+ * show Remainder.
  */
 export async function setOpening(
   input: SetOpeningInput,
@@ -42,13 +44,17 @@ export async function setOpening(
   const { supabase, user } = await requireUser();
   if (!user) return { status: "error", reason: "unauthenticated" };
 
+  const account = await loadAccount(input.accountId);
+  if (!account) return { status: "error", reason: "account_not_found" };
+
   const { error } = await supabase.from("openings").upsert(
     {
       owner_id: user.id,
+      account_id: account.id,
       amount: validation.amount,
       opened_on: validation.openedOn,
     },
-    { onConflict: "owner_id" },
+    { onConflict: "owner_id,account_id" },
   );
 
   if (error) return { status: "error", reason: "unavailable" };

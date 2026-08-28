@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
@@ -10,40 +11,58 @@ import {
   IconArrowDownLeft,
   IconArrowUpRight,
 } from "@/components/icons";
-import { formatByn } from "@/lib/money/format";
 import { formatAmountInput } from "@/lib/money/format-amount-input";
-import type { MonthlyTotal } from "@/lib/money/history-types";
 import { setOpeningErrorMessage } from "@/lib/opening/error-messages";
 import type { Opening, SetOpeningInput } from "@/lib/opening/types";
 
 type Props = {
-  remainder: number | null;
+  /** Account whose Remainder this is; null = cross-Account aggregate view. */
+  accountId: string | null;
+  /** Ready-made primary figure (already in the right Currency, «≈» if mixed). */
+  remainderText: string | null;
+  /** Ready-made secondary line ("≈ 1 250,00 Br"), or null. */
+  approxText?: string | null;
+  /** Account name shown under the figure; null in aggregate view. */
+  accountName?: string | null;
+  /** Currency label of the Opening form ("BYN" | "$" | "€"). */
+  currencyLabel: string;
   opening: Opening | null;
-  monthTotals: MonthlyTotal;
+  monthIncomeText: string;
+  monthExpenseText: string;
+  monthIncomeApprox?: string | null;
+  monthExpenseApprox?: string | null;
   today: string;
   tomorrow: string;
-  /** Ready-made "≈ $N" secondary line; null when no effective rate (ADR-0013). */
-  usdRemainder?: string | null;
+  /** Where to go to set a start when viewing the aggregate without Openings. */
+  pickAccountHref?: string | null;
   /** Injectable for tests; defaults to the Set Opening server action. */
   setOpeningFn?: (input: SetOpeningInput) => Promise<SetOpeningResult>;
 };
 
 /**
- * Home Remainder surface: prompt until the first Set Opening, then the live
- * figure plus a way to replace Opening. Month income/expense stay secondary.
+ * Home Remainder surface: prompt until the first Set Opening of the viewed
+ * Account, then the live figure plus a way to replace that Opening.
+ * Aggregate view shows the «≈» BYN total and points at a till to set a start.
  */
 export function RemainderCard({
-  remainder,
+  accountId,
+  remainderText,
+  approxText = null,
+  accountName = null,
+  currencyLabel,
   opening,
-  monthTotals,
+  monthIncomeText,
+  monthExpenseText,
+  monthIncomeApprox = null,
+  monthExpenseApprox = null,
   today,
   tomorrow,
-  usdRemainder = null,
+  pickAccountHref = null,
   setOpeningFn = setOpening,
 }: Props) {
   const router = useRouter();
-  const absent = remainder === null;
-  const [editing, setEditing] = useState(absent);
+  const absent = remainderText === null;
+  const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(
     opening ? formatAmountInput(opening.amount) : "",
   );
@@ -51,13 +70,15 @@ export function RemainderCard({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const canEditOpening = accountId !== null;
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (isPending) return;
+    if (!accountId || isPending) return;
 
     setError(null);
     startTransition(async () => {
-      const result = await setOpeningFn({ amount, openedOn });
+      const result = await setOpeningFn({ accountId, amount, openedOn });
       if (result.status === "ok") {
         setEditing(false);
         router.refresh();
@@ -67,23 +88,32 @@ export function RemainderCard({
     });
   }
 
+  function startEditing() {
+    setError(null);
+    setAmount(opening ? formatAmountInput(opening.amount) : "");
+    setOpenedOn(opening?.openedOn ?? today);
+    setEditing(true);
+  }
+
   return (
     <div className="space-y-4">
       <section aria-label="Остаток">
         {absent ? (
-          <EmptyRemainderPrompt />
+          canEditOpening ? (
+            <EmptyRemainderPrompt currencyLabel={currencyLabel} />
+          ) : (
+            <AggregateWithoutOpening href={pickAccountHref} />
+          )
         ) : (
           <PresentRemainder
-            remainder={remainder}
+            remainderText={remainderText}
+            approxText={approxText}
+            accountName={accountName}
             opening={opening}
-            usdRemainder={usdRemainder}
+            currencyLabel={currencyLabel}
             editing={editing}
-            onEdit={() => {
-              setError(null);
-              setAmount(opening ? formatAmountInput(opening.amount) : "");
-              setOpenedOn(opening?.openedOn ?? today);
-              setEditing(true);
-            }}
+            canEditOpening={canEditOpening}
+            onEdit={startEditing}
             onCancel={() => {
               setError(null);
               setEditing(false);
@@ -91,11 +121,11 @@ export function RemainderCard({
           />
         )}
 
-        {absent || editing ? (
+        {canEditOpening && (absent || editing) ? (
           <form onSubmit={onSubmit} className="mt-5 space-y-3" noValidate>
             <label className="block rounded-2xl bg-white px-4 py-3 shadow-card focus-within:ring-2 focus-within:ring-brand/35">
               <span className="text-[12px] font-medium text-ink-muted">
-                Сумма старта · BYN
+                Сумма старта · {currencyLabel}
               </span>
               <input
                 name="amount"
@@ -107,7 +137,7 @@ export function RemainderCard({
                 inputMode="decimal"
                 autoComplete="off"
                 autoFocus={absent}
-                aria-label="Сумма старта · BYN"
+                aria-label="Сумма старта"
                 className="mt-1 w-full border-0 bg-transparent p-0 text-xl font-bold tabular-nums text-ink outline-none placeholder:text-ink-muted/45"
                 placeholder="0,00"
               />
@@ -161,13 +191,15 @@ export function RemainderCard({
         <MonthTile
           label="Доходы за месяц"
           shortLabel="Доходы"
-          value={`+${formatByn(monthTotals.incomeTotal)}`}
+          value={monthIncomeText}
+          approx={monthIncomeApprox}
           tone="income"
         />
         <MonthTile
           label="Расходы за месяц"
           shortLabel="Расходы"
-          value={`−${formatByn(monthTotals.expenseTotal)}`}
+          value={monthExpenseText}
+          approx={monthExpenseApprox}
           tone="expense"
         />
       </div>
@@ -175,7 +207,7 @@ export function RemainderCard({
   );
 }
 
-function EmptyRemainderPrompt() {
+function EmptyRemainderPrompt({ currencyLabel }: { currencyLabel: string }) {
   return (
     <div className="text-center">
       <p className="text-[13px] font-medium text-ink-muted">Остаток</p>
@@ -183,62 +215,96 @@ function EmptyRemainderPrompt() {
         Задать старт
       </h2>
       <p className="mx-auto mt-2 max-w-[20rem] text-[13px] font-medium leading-snug text-ink-muted">
-        Укажите, сколько наличных вы посчитали, и дату. Пока старта нет, остаток
-        не показываем.
+        Укажите, сколько денег в этом счёте ({currencyLabel}) вы посчитали, и
+        дату. Пока старта нет, остаток не показываем.
       </p>
     </div>
   );
 }
 
+function AggregateWithoutOpening({ href }: { href: string | null }) {
+  return (
+    <div className="text-center">
+      <p className="text-[13px] font-medium text-ink-muted">Остаток</p>
+      <h2 className="mt-2 text-[1.65rem] font-bold leading-tight tracking-[-0.03em]">
+        Задать старт
+      </h2>
+      <p className="mx-auto mt-2 max-w-[20rem] text-[13px] font-medium leading-snug text-ink-muted">
+        У каждого счёта свой старт. Выберите счёт и укажите, сколько в нём
+        денег и на какую дату.
+      </p>
+      {href ? (
+        <Link
+          href={href}
+          className="mt-3 inline-flex min-h-11 items-center rounded-full bg-white px-4 text-[13px] font-bold text-ink shadow-card transition hover:bg-white active:scale-95"
+        >
+          Открыть счёт
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
 function PresentRemainder({
-  remainder,
+  remainderText,
+  approxText,
+  accountName,
   opening,
-  usdRemainder,
+  currencyLabel,
   editing,
+  canEditOpening,
   onEdit,
   onCancel,
 }: {
-  remainder: number;
+  remainderText: string;
+  approxText: string | null;
+  accountName: string | null;
   opening: Opening | null;
-  usdRemainder: string | null;
+  currencyLabel: string;
   editing: boolean;
+  canEditOpening: boolean;
   onEdit: () => void;
   onCancel: () => void;
 }) {
   return (
     <div className="text-center">
-      <p className="text-[13px] font-medium text-ink-muted">Остаток</p>
-      <p className="mt-2 text-[2.65rem] font-bold leading-none tracking-[-0.04em] tabular-nums sm:text-[2.85rem]">
-        {remainder < 0 ? "−" : ""}
-        {formatByn(Math.abs(remainder))}
+      <p className="text-[13px] font-medium text-ink-muted">
+        {accountName ? `Остаток · ${accountName}` : "Остаток"}
       </p>
-      {usdRemainder ? (
+      <p className="mt-2 text-[2.65rem] font-bold leading-none tracking-[-0.04em] tabular-nums sm:text-[2.85rem]">
+        {remainderText}
+      </p>
+      {approxText ? (
         <p className="mt-1.5 text-[13px] font-medium tabular-nums text-ink-muted">
-          {usdRemainder}
+          {approxText}
         </p>
       ) : null}
       <p className="mt-2.5 text-[13px] font-medium text-ink-muted">
         {opening
-          ? `Старт ${formatByn(opening.amount)} · с ${formatOpeningDate(opening.openedOn)}`
-          : "Живой остаток от старта"}
+          ? `Старт ${formatOpening(opening.amount, currencyLabel)} · с ${formatOpeningDate(opening.openedOn)}`
+          : canEditOpening
+            ? "Живой остаток от старта"
+            : "Сумма по всем счетам"}
       </p>
-      {editing ? (
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-3 min-h-11 rounded-full px-3 text-[13px] font-semibold text-ink transition hover:opacity-70 active:scale-95"
-        >
-          Закрыть
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={onEdit}
-          className="mt-3 min-h-11 rounded-full px-3 text-[13px] font-semibold text-ink transition hover:opacity-70 active:scale-95"
-        >
-          Изменить старт
-        </button>
-      )}
+      {canEditOpening ? (
+        editing ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-3 min-h-11 rounded-full px-3 text-[13px] font-semibold text-ink transition hover:opacity-70 active:scale-95"
+          >
+            Закрыть
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="mt-3 min-h-11 rounded-full px-3 text-[13px] font-semibold text-ink transition hover:opacity-70 active:scale-95"
+          >
+            Изменить старт
+          </button>
+        )
+      ) : null}
     </div>
   );
 }
@@ -247,11 +313,13 @@ function MonthTile({
   label,
   shortLabel,
   value,
+  approx,
   tone,
 }: {
   label: string;
   shortLabel: string;
   value: string;
+  approx: string | null;
   tone: "income" | "expense";
 }) {
   const income = tone === "income";
@@ -284,6 +352,11 @@ function MonthTile({
       >
         <MonthAmountValue value={value} />
       </p>
+      {approx ? (
+        <p className="min-w-0 text-[10px] font-medium tabular-nums text-ink-muted">
+          {approx}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -299,6 +372,16 @@ function MonthAmountValue({ value }: { value: string }) {
       {suffix}
     </>
   );
+}
+
+function formatOpening(amount: number, currencyLabel: string): string {
+  const body = amount.toLocaleString("ru-BY", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return currencyLabel === "Br"
+    ? `${body}\u00a0Br`
+    : `${currencyLabel}${body}`;
 }
 
 function formatOpeningDate(openedOn: string): string {

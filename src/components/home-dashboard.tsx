@@ -1,34 +1,60 @@
 import Link from "next/link";
+import { AccountSwitcher } from "@/components/account-switcher";
 import { HistoryList } from "@/components/history-list";
 import { IconGear } from "@/components/icons";
 import { RemainderCard } from "@/components/remainder-card";
-import type { HistoryItem, MonthlyTotal } from "@/lib/money/history-types";
+import type { Account } from "@/lib/accounts/types";
+import type { HistoryEntry } from "@/lib/money/history-types";
 import type { Opening } from "@/lib/opening/types";
 
 type Props = {
-  remainder: number | null;
+  accounts: Account[];
+  /** null = «Все счета» aggregate view. */
+  selected: Account | null;
+  /** Crafted ?acc= that is not one of the user's Accounts. */
+  unknownAccount: boolean;
+  remainderText: string | null;
+  approxText: string | null;
+  currencyLabel: string;
   opening: Opening | null;
-  monthTotals: MonthlyTotal;
-  recent: HistoryItem[];
+  monthIncomeText: string;
+  monthExpenseText: string;
+  monthIncomeApprox: string | null;
+  monthExpenseApprox: string | null;
+  recent: HistoryEntry[];
+  /** id → Account, so History rows can name their till. */
+  accountById: Record<string, Account>;
   today: string;
   tomorrow: string;
-  /** Ready-made "≈ $N" line under Remainder; null when no rate (ADR-0013). */
-  usdRemainder?: string | null;
+  /** Home href for a selection (null = aggregate). */
+  hrefFor: (accountId: string | null) => string;
 };
 
 /**
- * Home: Remainder (or Set Opening), current-month tiles, recent History.
+ * Home: Remainder of one Account (exact in its Currency) or the «≈» BYN
+ * aggregate, current-month tiles, recent History.
  * Expense Category breakdown lives on Month, not here.
  */
 export function HomeDashboard({
-  remainder,
+  accounts,
+  selected,
+  unknownAccount,
+  remainderText,
+  approxText,
+  currencyLabel,
   opening,
-  monthTotals,
+  monthIncomeText,
+  monthExpenseText,
+  monthIncomeApprox,
+  monthExpenseApprox,
   recent,
+  accountById,
   today,
   tomorrow,
-  usdRemainder = null,
+  hrefFor,
 }: Props) {
+  const defaultAccount = accounts.find((a) => a.isDefault) ?? accounts[0] ?? null;
+
   return (
     <div className="ui-page min-w-0">
       <header className="flex w-full items-center justify-between gap-3">
@@ -55,14 +81,38 @@ export function HomeDashboard({
         </Link>
       </header>
 
+      <AccountSwitcher
+        accounts={accounts}
+        selectedId={selected?.id ?? null}
+        hrefFor={hrefFor}
+      />
+
+      {unknownAccount ? (
+        <p
+          className="mt-3 rounded-control bg-expense-soft px-3 py-2 text-[13px] text-expense"
+          role="alert"
+        >
+          Этот счёт недоступен — показывает все счета.
+        </p>
+      ) : null}
+
       <div className="mt-7">
         <RemainderCard
-          remainder={remainder}
+          accountId={selected?.id ?? null}
+          remainderText={remainderText}
+          approxText={approxText}
+          accountName={selected?.name ?? null}
+          currencyLabel={currencyLabel}
           opening={opening}
-          monthTotals={monthTotals}
+          monthIncomeText={monthIncomeText}
+          monthExpenseText={monthExpenseText}
+          monthIncomeApprox={monthIncomeApprox}
+          monthExpenseApprox={monthExpenseApprox}
           today={today}
           tomorrow={tomorrow}
-          usdRemainder={usdRemainder}
+          pickAccountHref={
+            defaultAccount ? hrefFor(defaultAccount.id) : null
+          }
         />
       </div>
 
@@ -72,13 +122,17 @@ export function HomeDashboard({
             История
           </h2>
           <Link
-            href="/history"
+            href={selected ? `/history?acc=${selected.id}` : "/history"}
             className="text-[13px] font-semibold text-ink-muted transition hover:text-ink"
           >
             Все
           </Link>
         </div>
-        <HistoryList items={recent} />
+        <HistoryList
+          entries={recent}
+          accountById={accountById}
+          showAccountNames={selected === null}
+        />
       </section>
     </div>
   );

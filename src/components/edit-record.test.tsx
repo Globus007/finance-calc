@@ -2,6 +2,8 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { EditRecord } from "./edit-record";
+import type { Account } from "@/lib/accounts/types";
+import type { RateMap } from "@/lib/fx";
 import type { EditableRecord } from "@/lib/money/edit-types";
 
 vi.mock("next/navigation", () => ({
@@ -20,6 +22,12 @@ const categories = [
   { id: "cat-other", displayName: "Прочее" },
   { id: "cat-hidden", displayName: "Скрытая" },
 ];
+
+const accounts: Account[] = [
+  { id: "acc-byn", name: "Наличные", currency: "BYN", isDefault: true },
+];
+
+const rates: RateMap = {};
 
 function expense(partial: Partial<EditableRecord> = {}): EditableRecord {
   return {
@@ -53,6 +61,8 @@ describe("EditRecord", () => {
       <EditRecord
         record={expense()}
         categories={categories}
+        accounts={accounts}
+        rates={rates}
         editFn={vi.fn()}
         deleteFn={vi.fn()}
       />,
@@ -76,6 +86,8 @@ describe("EditRecord", () => {
       <EditRecord
         record={income()}
         categories={[]}
+        accounts={accounts}
+        rates={rates}
         editFn={vi.fn()}
         deleteFn={vi.fn()}
       />,
@@ -95,6 +107,8 @@ describe("EditRecord", () => {
       <EditRecord
         record={expense({ categoryId: "cat-hidden" })}
         categories={categories}
+        accounts={accounts}
+        rates={rates}
         editFn={vi.fn()}
         deleteFn={vi.fn()}
       />,
@@ -118,6 +132,8 @@ describe("EditRecord", () => {
       <EditRecord
         record={expense()}
         categories={categories}
+        accounts={accounts}
+        rates={rates}
         editFn={editFn}
         deleteFn={vi.fn()}
       />,
@@ -136,7 +152,7 @@ describe("EditRecord", () => {
         occurredOn: "2026-08-04",
         categoryId: "cat-products",
         note: "Евроопт",
-        currency: "BYN",
+        accountId: "acc-byn",
       });
     });
   });
@@ -150,6 +166,8 @@ describe("EditRecord", () => {
       <EditRecord
         record={income()}
         categories={[]}
+        accounts={accounts}
+        rates={rates}
         editFn={vi.fn()}
         deleteFn={deleteFn}
       />,
@@ -171,6 +189,8 @@ describe("EditRecord", () => {
       <EditRecord
         record={expense()}
         categories={categories}
+        accounts={accounts}
+        rates={rates}
         editFn={vi.fn()}
         deleteFn={deleteFn}
       />,
@@ -181,68 +201,58 @@ describe("EditRecord", () => {
   });
 });
 
-describe("EditRecord currency chips (ADR-0013)", () => {
-  it("opens a $ record prefilled with the original typed amount and $ chip active", () => {
+describe("EditRecord Account Currency (ADR-0014)", () => {
+  const usdAccount: Account = {
+    id: "acc-usd",
+    name: "Доллары",
+    currency: "USD",
+    isDefault: false,
+  };
+
+  it("opens a USD-Account record prefilled with the original typed amount", () => {
     render(
       <EditRecord
         record={expense({
           amount: 165,
-          usd: { originalAmount: 50, fxRate: 3.3012 },
+          accountId: "acc-usd",
+          snapshot: { currency: "USD", originalAmount: 50, fxRate: 3.3012 },
         })}
         categories={categories}
+        accounts={[...accounts, usdAccount]}
+        rates={rates}
         editFn={vi.fn()}
       />,
     );
 
-    const chips = screen.getByRole("group", { name: "Валюта" });
-    expect(chips).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "$" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "BYN" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(screen.queryByRole("group", { name: "Валюта" })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Сумма/i)).toHaveValue("50.00");
+    expect(screen.getByLabelText("Счёт")).toHaveValue("acc-usd");
   });
 
-  it("submits the chosen currency so BYN is recomputed at save time", async () => {
+  it("submits the Account, not a per-record Currency", async () => {
     const user = userEvent.setup();
     const editFn = vi.fn().mockResolvedValue({ status: "ok" });
     render(
       <EditRecord
         record={expense({
           amount: 165,
-          usd: { originalAmount: 50, fxRate: 3.3012 },
+          accountId: "acc-usd",
+          snapshot: { currency: "USD", originalAmount: 50, fxRate: 3.3012 },
         })}
         categories={categories}
+        accounts={[...accounts, usdAccount]}
+        rates={rates}
         editFn={editFn}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "BYN" }));
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
 
     await waitFor(() => {
       expect(editFn).toHaveBeenCalledWith(
-        expect.objectContaining({ currency: "BYN" }),
+        expect.objectContaining({ accountId: "acc-usd" }),
       );
     });
-  });
-
-  it("defaults to the BYN chip for native records", () => {
-    render(
-      <EditRecord
-        record={expense()}
-        categories={categories}
-        editFn={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "BYN" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    expect(editFn.mock.calls[0][0]).not.toHaveProperty("currency");
   });
 });

@@ -1,4 +1,6 @@
-import { formatByn } from "@/lib/money/format";
+import type { Currency } from "@/lib/fx";
+import { formatByn, formatMoney } from "@/lib/money/format";
+import { signedTotalText } from "@/lib/money/display";
 import type { MonthlyTotal } from "@/lib/money/history-types";
 
 type Props = {
@@ -7,12 +9,16 @@ type Props = {
   caption?: string;
   /** Show simple income/expense bars (Month tab). */
   showBars?: boolean;
-  /** Ready-made "≈ $N" lines; null when no effective rate (ADR-0013). */
+  /** Ready-made "≈ …" lines; null when the figures need no mirror (ADR-0013). */
   secondary?: {
     net: string;
     income: string;
     expense: string;
   } | null;
+  /** Currency of `totals` — the viewed Account's Currency (ADR-0014). */
+  currency?: Currency;
+  /** Cross-Account BYN totals are approximate («≈»). */
+  approximate?: boolean;
 };
 
 /**
@@ -24,6 +30,8 @@ export function MonthlyTotalCard({
   caption = "Нетто · текущий месяц",
   showBars = false,
   secondary = null,
+  currency = "BYN",
+  approximate = false,
 }: Props) {
   const { expenseTotal, incomeTotal, net } = totals;
   const empty = expenseTotal === 0 && incomeTotal === 0;
@@ -58,8 +66,9 @@ export function MonthlyTotalCard({
           </span>
         </div>
         <p className="mt-2 text-[2.2rem] font-bold leading-none tracking-[-0.04em] tabular-nums sm:text-[2.45rem]">
-          {net < 0 ? "−" : ""}
-          {formatByn(Math.abs(net))}
+          {approximate
+            ? formatApproxNet(net)
+            : formatMoney(net, currency)}
         </p>
         {secondary ? (
           <p className="mt-1 text-[12px] font-medium tabular-nums text-white/60">
@@ -100,14 +109,14 @@ export function MonthlyTotalCard({
       >
         <MetricTile
           label="Доходы"
-          value={`+${formatByn(incomeTotal)}`}
-          usd={secondary?.income ?? null}
+          value={signedTotalText(incomeTotal, currency, "+", approximate)}
+          secondaryLine={secondary?.income ?? null}
           tone="income"
         />
         <MetricTile
           label="Расходы"
-          value={`−${formatByn(expenseTotal)}`}
-          usd={secondary?.expense ?? null}
+          value={signedTotalText(expenseTotal, currency, "−", approximate)}
+          secondaryLine={secondary?.expense ?? null}
           tone="expense"
         />
       </div>
@@ -115,15 +124,21 @@ export function MonthlyTotalCard({
   );
 }
 
+/** «≈ −123,00 Br» for a negative cross-Account net. */
+function formatApproxNet(net: number): string {
+  const body = net < 0 ? formatByn(Math.abs(net)) : formatByn(net);
+  return `≈ ${net < 0 ? "−" : ""}${body}`;
+}
+
 function MetricTile({
   label,
   value,
-  usd,
+  secondaryLine,
   tone,
 }: {
   label: string;
   value: string;
-  usd: string | null;
+  secondaryLine: string | null;
   tone: "income" | "expense";
 }) {
   return (
@@ -138,9 +153,9 @@ function MetricTile({
       >
         {value}
       </p>
-      {usd ? (
+      {secondaryLine ? (
         <p className="mt-0.5 text-[11px] font-medium tabular-nums text-white/55">
-          {usd}
+          {secondaryLine}
         </p>
       ) : null}
     </div>

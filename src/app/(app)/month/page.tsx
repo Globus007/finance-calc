@@ -1,64 +1,108 @@
+import { AccountSwitcher } from "@/components/account-switcher";
 import { CategoryBreakdown } from "@/components/category-breakdown";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { MonthlyTotalCard } from "@/components/monthly-total-card";
-import {
-  currentYearMonth,
-  resolveYearMonth,
-} from "@/lib/dates/minsk-month";
-import { getEffectiveRate } from "@/lib/fx";
+import { monthLabelRu } from "@/lib/dates/minsk-month";
+import { currentYearMonth, resolveYearMonth } from "@/lib/dates/minsk-month";
+import { currencyLabel } from "@/lib/money/display";
 import { computeCategoryBreakdown } from "@/lib/money/category-breakdown";
-import { formatUsdApprox } from "@/lib/money/format";
+import { formatApproxIn } from "@/lib/money/format";
 import { loadMonthMoney } from "@/lib/money/load-money";
 
 /**
- * Month tab: live Monthly total + expense Category breakdown
- * for a selected calendar month (Europe/Minsk).
- * Default is the current month; prev/next switcher browses past months up to current.
- * Empty month and incomplete current month use the same live sum.
+ * Month tab: live Monthly total + expense Category breakdown for one calendar
+ * month (Europe/Minsk) and one Account — or the «≈» BYN aggregate across all
+ * Accounts. Transfers never enter these totals (ADR-0014).
  */
 export default async function MonthPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ym?: string }>;
+  searchParams: Promise<{ ym?: string; acc?: string }>;
 }) {
   const params = await searchParams;
   const current = currentYearMonth();
   const requested = resolveYearMonth(params.ym);
   // Past + current only (MVP): clamp crafted future ?ym= to current month.
   const yearMonth = requested > current ? current : requested;
-  const { totals, items } = await loadMonthMoney(yearMonth);
-  const breakdown = computeCategoryBreakdown(items);
+  const account = params.acc?.trim() || null;
 
-  // Server-side precompute: components receive ready-made strings (ADR-0013).
-  const rate = await getEffectiveRate();
-  const secondary = rate
-    ? {
-        net: formatUsdApprox(totals.net / rate.rate),
-        income: formatUsdApprox(totals.incomeTotal / rate.rate),
-        expense: formatUsdApprox(totals.expenseTotal / rate.rate),
-      }
-    : null;
+  const {
+    accounts,
+    selected,
+    unknownAccount,
+    currency,
+    approximate,
+    totals,
+    totalsByn,
+    items,
+  } = await loadMonthMoney(yearMonth, account);
+
+  const breakdown = computeCategoryBreakdown(items, currency);
+  const bynMirror = !approximate && currency !== "BYN";
+  const label = currencyLabel(currency);
+
+  const caption = [
+    "Нетто",
+    monthLabelRu(yearMonth),
+    selected ? selected.name : "все счета",
+  ].join(" · ");
+
+  // Single non-BYN till: mirror its figures in BYN. The aggregate view is
+  // already BYN and carries «≈» in the figures themselves.
+  const secondary =
+    bynMirror && totalsByn
+      ? {
+          net: formatApproxIn("BYN", totalsByn.net),
+          income: formatApproxIn("BYN", totalsByn.incomeTotal),
+          expense: formatApproxIn("BYN", totalsByn.expenseTotal),
+        }
+      : null;
 
   return (
     <div className="ui-page pb-12">
       <h1 className="text-[1.55rem] font-bold tracking-[-0.04em]">Итог месяца</h1>
       <p className="mt-1 text-sm text-ink-muted">
         Расходы и доходы · календарный месяц
+        {selected ? ` · ${selected.name} (${label})` : ""}
       </p>
 
-      <MonthSwitcher yearMonth={yearMonth} />
+      <AccountSwitcher
+        accounts={accounts}
+        selectedId={selected?.id ?? null}
+        hrefFor={(accountId) =>
+          `/month?ym=${yearMonth}${accountId ? `&acc=${accountId}` : ""}`
+        }
+      />
+
+      {unknownAccount ? (
+        <p
+          className="mt-3 rounded-control bg-expense-soft px-3 py-2 text-[13px] text-expense"
+          role="alert"
+        >
+          Этот счёт недоступен — показывает все счета.
+        </p>
+      ) : null}
+
+      <MonthSwitcher
+        yearMonth={yearMonth}
+        hrefFor={(ym) =>
+          `/month?ym=${ym}${selected ? `&acc=${selected.id}` : ""}`
+        }
+      />
 
       <div className="mt-5">
         <MonthlyTotalCard
           totals={totals}
-          caption="Нетто"
+          caption={caption}
           showBars
           secondary={secondary}
+          currency={currency}
+          approximate={approximate}
         />
       </div>
 
       <div className="mt-6">
-        <CategoryBreakdown rows={breakdown} />
+        <CategoryBreakdown rows={breakdown} currency={currency} />
       </div>
 
       {items.length > 0 ? (

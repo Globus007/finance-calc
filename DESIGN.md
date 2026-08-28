@@ -1,6 +1,6 @@
 ---
 name: Финансы
-description: Capture-first personal cash tracker in BYN — a watercolor till with ink figures.
+description: Capture-first personal finance tracker across named Accounts and currencies — a watercolor till with ink figures.
 colors:
   ink: "#16141f"
   ink-muted: "#6d6a78"
@@ -15,6 +15,8 @@ colors:
   positive-soft: "#e4f7ee"
   expense: "#e0454a"
   expense-soft: "#fde8e8"
+  transfer: "#2f7f8c"
+  transfer-soft: "#e0f2f5"
   hero: "#1a1a22"
   hero-caption: "#cfc9e0"
   income-bright: "#99f6e4"

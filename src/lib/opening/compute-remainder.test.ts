@@ -18,6 +18,8 @@ function expense(
     categoryDisplayName: "Продукты",
     note: null,
     channel: "manual",
+    snapshot: null,
+    accountId: null,
   };
 }
 
@@ -36,10 +38,13 @@ function income(
     categoryDisplayName: null,
     note: "Зарплата",
     channel: "manual",
+    snapshot: null,
+    accountId: null,
   };
 }
 
 const opening = (amount: number, openedOn: string): Opening => ({
+  accountId: "acc-1",
   amount,
   openedOn,
 });
@@ -57,6 +62,18 @@ describe("remainderFromTotals", () => {
 
   it("treats empty committed totals as the Opening amount", () => {
     expect(remainderFromTotals(opening(250.5, "2026-08-10"), 0, 0)).toBe(250.5);
+  });
+
+  it("adds incoming Transfers and subtracts outgoing Transfers", () => {
+    expect(
+      remainderFromTotals(opening(100, "2026-08-10"), 0, 0, 20, 30),
+    ).toBe(90);
+  });
+
+  it("lets a Transfer push Remainder negative", () => {
+    expect(remainderFromTotals(opening(10, "2026-08-10"), 0, 0, 0, 25)).toBe(
+      -15,
+    );
   });
 });
 

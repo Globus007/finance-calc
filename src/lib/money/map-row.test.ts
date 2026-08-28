@@ -24,7 +24,8 @@ describe("mapExpenseRow", () => {
       categoryDisplayName: "Продукты",
       note: "Евроопт",
       channel: "photo",
-      usd: null,
+      snapshot: null,
+      accountId: null,
     });
   });
 });
@@ -50,7 +51,8 @@ describe("mapIncomeRow", () => {
       categoryDisplayName: null,
       note: "Зарплата",
       channel: "manual",
-      usd: null,
+      snapshot: null,
+      accountId: null,
     });
   });
 });
@@ -70,8 +72,8 @@ describe("currency snapshot columns (ADR-0013)", () => {
         original_amount: "50",
         fx_rate: "3.3012",
         categories: { display_name: "Продукты" },
-      }).usd,
-    ).toEqual({ originalAmount: 50, fxRate: 3.3012 });
+      }).snapshot,
+    ).toEqual({ currency: "USD", originalAmount: 50, fxRate: 3.3012 });
   });
 
   it("old rows without the columns read as native BYN", () => {
@@ -85,7 +87,7 @@ describe("currency snapshot columns (ADR-0013)", () => {
       category_id: "cat-food",
       categories: { display_name: "Продукты" },
     });
-    expect(row.usd).toBeNull();
+    expect(row.snapshot).toBeNull();
 
     const income = mapIncomeRow({
       id: "i2",
@@ -98,6 +100,6 @@ describe("currency snapshot columns (ADR-0013)", () => {
       original_amount: null,
       fx_rate: null,
     });
-    expect(income.usd).toBeNull();
+    expect(income.snapshot).toBeNull();
   });
 });

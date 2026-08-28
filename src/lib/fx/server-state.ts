@@ -1,10 +1,12 @@
-import type { FxState } from "./types";
+import type { FxState, RateCurrency } from "./types";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { userFromGetUserResult } from "@/lib/supabase/session-user";
 
 /**
  * Supabase-backed persistence for the FX seam (fx_rates table).
- * One row per user; cache may be empty before the first successful fetch.
+ * One row per (user, Currency) since ADR-0014; cache may be empty before the
+ * first fetch for that Currency.
  */
 
 type FxRow = {
@@ -23,59 +25,82 @@ function mapFxState(row: FxRow): FxState {
   };
 }
 
-/** Per-user FX state, or null when unauthenticated or no row exists yet. */
-export async function loadFxState(): Promise<FxState | null> {
-  const supabase = await createClient();
-  const user = userFromGetUserResult(await supabase.auth.getUser());
-  if (!user) return null;
+/**
+ * Owner whose FX state to read: the session by default, an explicit id when a
+ * service-role caller (Telegram bot) resolves a rate for its user.
+ */
+/** Per-(user, Currency) FX state, or null when unauthenticated / no row yet. */
+export async function loadFxState(
+  currency: RateCurrency,
+  ownerId?: string,
+): Promise<FxState | null> {
+  const owner = ownerId ?? (await sessionOwnerId());
+  if (!owner) return null;
 
+  const supabase = ownerId ? createAdminClient() : await createClient();
   const { data, error } = await supabase
     .from("fx_rates")
     .select("cached_rate, cached_at, override_rate, override_at")
-    .eq("owner_id", user.id)
+    .eq("owner_id", owner)
+    .eq("currency", currency)
     .maybeSingle();
 
   if (error || !data) return null;
   return mapFxState(data as FxRow);
 }
 
-/** Owner id of the current session, for upserts below. */
-async function requireOwnerId(): Promise<string | null> {
+/** Session owner id (no admin client needed for reads by RLS). */
+async function sessionOwnerId(): Promise<string | null> {
   const supabase = await createClient();
   const user = userFromGetUserResult(await supabase.auth.getUser());
   return user?.id ?? null;
 }
 
+/** Owner id of the current session, for session-scoped upserts. */
+async function requireOwnerId(): Promise<string | null> {
+  return sessionOwnerId();
+}
+
 export async function saveFxCache(
+  currency: RateCurrency,
   rate: number,
   at: Date,
+  ownerId?: string,
 ): Promise<void> {
-  const ownerId = await requireOwnerId();
-  if (!ownerId) return;
+  const owner = ownerId ?? (await requireOwnerId());
+  if (!owner) return;
 
-  const supabase = await createClient();
+  const supabase = ownerId ? createAdminClient() : await createClient();
   await supabase.from("fx_rates").upsert(
-    { owner_id: ownerId, cached_rate: rate, cached_at: at.toISOString() },
-    { onConflict: "owner_id" },
+    {
+      owner_id: owner,
+      currency,
+      cached_rate: rate,
+      cached_at: at.toISOString(),
+    },
+    { onConflict: "owner_id,currency" },
   );
 }
 
 /** Writes or clears (null) the manual override; keeps the cache untouched. */
 export async function saveFxOverride(
+  currency: RateCurrency,
   rate: number | null,
   at: Date,
+  ownerId?: string,
 ): Promise<boolean> {
-  const ownerId = await requireOwnerId();
-  if (!ownerId) return false;
+  const owner = ownerId ?? (await requireOwnerId());
+  if (!owner) return false;
 
-  const supabase = await createClient();
+  const supabase = ownerId ? createAdminClient() : await createClient();
   const { error } = await supabase.from("fx_rates").upsert(
     {
-      owner_id: ownerId,
+      owner_id: owner,
+      currency,
       override_rate: rate,
       override_at: rate == null ? null : at.toISOString(),
     },
-    { onConflict: "owner_id" },
+    { onConflict: "owner_id,currency" },
   );
   return !error;
 }

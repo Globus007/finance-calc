@@ -1,11 +1,16 @@
+import type { Currency } from "@/lib/fx";
+
 /** In-flight Draft for confirm (client-only; ADR-0003). */
 
 export type RecordKind = "expense" | "income";
 
 export type CaptureChannel = "photo" | "voice" | "manual";
 
-/** Currency the Amount was typed in. Only manual capture / Edit offers USD (ADR-0013). */
-export type DraftCurrency = "BYN" | "USD";
+/**
+ * Currency the Amount is typed in. It always comes from the Draft's Account
+ * (ADR-0014) — there is no per-record currency choice.
+ */
+export type DraftCurrency = Currency;
 
 /**
  * Prospective single Expense or Income held on confirm.
@@ -22,6 +27,12 @@ export type Draft = {
   /** Expense only; empty until user picks (manual) or extract maps. */
   categoryId: string;
   note: string;
-  /** Typed currency of `amount`; absent = BYN (extraction/bot stay BYN-only, ADR-0013). */
+  /**
+   * Account the record will belong to. Manual capture picks it on confirm;
+   * photo / voice / bot leave it absent and the server commits to the default
+   * Account (ADR-0014).
+   */
+  accountId?: string;
+  /** Typed currency of `amount`; mirrors `accountId`'s Currency (absent = BYN). */
   currency?: DraftCurrency;
 };

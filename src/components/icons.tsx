@@ -207,6 +207,29 @@ export function IconArrowUpRight({ className, size = 18 }: IconProps) {
   );
 }
 
+/** Own-Account move (Transfer): two horizontal arrows, one each way. */
+export function IconTransfer({ className, size = 18 }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <line x1="4" y1="9" x2="20" y2="9" />
+      <polyline points="16 5 20 9 16 13" />
+      <line x1="20" y1="15" x2="4" y2="15" />
+      <polyline points="8 11 4 15 8 19" />
+    </svg>
+  );
+}
+
 /** Modern two-layer icon set reserved for the persistent PWA dock. */
 export function IconNavHome({ className, size = 20 }: IconProps) {
   return (

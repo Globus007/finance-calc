@@ -7,10 +7,12 @@ import {
   commitVoiceDraft,
   type CommitDraftResult,
 } from "@/app/(app)/capture/actions";
+import type { AccountPickerItem } from "@/lib/accounts/types";
 import type { CategoryPickerItem } from "@/lib/categories/types";
 import { commitErrorMessage } from "@/lib/draft/error-messages";
 import type { Draft, DraftCurrency, RecordKind } from "@/lib/draft/types";
 import { canCommit } from "@/lib/draft/validate-commit";
+import { currencyLabel } from "@/lib/money/display";
 import { MAX_NOTE_LENGTH } from "@/lib/draft/normalize-note";
 
 type CommitInput = {
@@ -19,12 +21,14 @@ type CommitInput = {
   occurredOn: string;
   categoryId: string;
   note: string;
-  currency: DraftCurrency;
+  accountId?: string;
 };
 
 type Props = {
   initialDraft: Draft;
   categories: CategoryPickerItem[];
+  /** Accounts for the manual picker; also sets the Currency of the Amount. */
+  accounts: AccountPickerItem[];
   onDiscard: () => void;
   onCommitted: () => void;
   /** Injectable for tests; defaults by channel (manual / photo / voice). */
@@ -51,67 +55,63 @@ export function switchDraftKind(draft: Draft, kind: RecordKind): Draft {
 }
 
 /**
- * Currency chip pair «BYN | $» next to Amount (ADR-0013): one tap to enter
- * dollars; conversion happens server-side at Commit.
+ * Account chips on the manual confirm sheet (ADR-0014). The Account fixes the
+ * Currency of the Amount; photo / voice / bot never show this picker.
  */
-export function CurrencyChips({
+export function AccountChips({
+  accounts,
   value,
   onChange,
-  tone = "hero",
 }: {
-  value: DraftCurrency;
-  onChange: (currency: DraftCurrency) => void;
-  /** "hero" on the dark amount card; "light" on white cards. */
-  tone?: "hero" | "light";
+  accounts: AccountPickerItem[];
+  value: string;
+  onChange: (accountId: string) => void;
 }) {
-  const selectedClass =
-    tone === "hero"
-      ? "bg-white text-ink shadow-card"
-      : "bg-ink text-white shadow-card";
-  const idleClass =
-    tone === "hero"
-      ? "border border-white/40 text-white/75 hover:bg-white/10"
-      : "border border-line bg-surface-strong text-ink-muted hover:border-brand-soft hover:bg-white";
   return (
-    <span
-      className="flex shrink-0 gap-1"
+    <div
+      className="flex flex-wrap gap-1.5"
       role="group"
-      aria-label="Валюта"
+      aria-label="Счёт"
+      aria-required
     >
-      {(
-        [
-          { code: "BYN" as const, label: "BYN" },
-          { code: "USD" as const, label: "$" },
-        ] as const
-      ).map((opt) => (
-        <button
-          key={opt.code}
-          type="button"
-          onClick={() => onChange(opt.code)}
-          aria-pressed={value === opt.code}
-          className={`cursor-pointer rounded-full px-2.5 py-1 text-[11px] font-bold transition active:scale-95 ${
-            value === opt.code ? selectedClass : idleClass
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </span>
+      {accounts.map((account) => {
+        const selected = account.id === value;
+        return (
+          <button
+            key={account.id}
+            type="button"
+            onClick={() => onChange(account.id)}
+            aria-pressed={selected}
+            className={`cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98] ${
+              selected
+                ? "bg-brand text-white shadow-[0_8px_16px_-12px_rgba(79,70,229,0.55)]"
+                : "border border-line bg-surface-strong text-ink-muted hover:border-brand-soft hover:bg-white"
+            }`}
+          >
+            {account.name}
+            <span className={selected ? "ml-1 text-white/80" : "ml-1 text-ink-muted"}>
+              {currencyLabel(account.currency)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
 /**
  * Confirm form for one in-flight Draft (ADR-0003).
  * Channel is not shown or edited. Commit failure keeps Draft for retry.
- * Voice and manual allow Expense↔Income switch on confirm (ADR-0002;
- * manual kind switch collapses the separate type-picker screen — issue #61).
+ * Voice and manual allow Expense↔Income switch on confirm (ADR-0002).
+ * Manual also picks the Account; photo / voice commit to the default Account.
  *
- * Amount-first layout (issue #61): Amount → Category chips (expense) → Date → Note.
- * Manual channel auto-focuses Amount so typing starts immediately.
+ * Amount-first layout (issue #61): Amount → Account (manual) → Category (expense)
+ * → Date → Note.
  */
 export function ConfirmDraft({
   initialDraft,
   categories,
+  accounts,
   onDiscard,
   onCommitted,
   commitFn,
@@ -121,7 +121,17 @@ export function ConfirmDraft({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const ready = canCommit(draft);
+  // Manual capture picks a till; other Channels use the default one (server
+  // re-resolves it as the trust boundary — the label here is only a hint).
+  const defaultAccount =
+    accounts.find((a) => a.isDefault) ?? accounts[0] ?? null;
+  const showPicker = draft.channel === "manual" && accounts.length > 0;
+  const account = showPicker
+    ? accounts.find((a) => a.id === draft.accountId) ?? defaultAccount
+    : defaultAccount;
+  const currency: DraftCurrency = account?.currency ?? "BYN";
+
+  const ready = canCommit({ ...draft, currency });
   // Manual gets kind switch so type is chosen on confirm (fewer screens).
   const allowKindSwitch =
     draft.channel === "voice" || draft.channel === "manual";
@@ -137,6 +147,17 @@ export function ConfirmDraft({
     setDraft((d) => switchDraftKind(d, kind));
   }
 
+  function onAccountChange(accountId: string) {
+    const next = accounts.find((a) => a.id === accountId);
+    setError(null);
+    setDraft((d) => ({
+      ...d,
+      accountId,
+      // The Amount is typed in the Account's Currency (ADR-0014).
+      currency: next?.currency ?? d.currency,
+    }));
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!ready || isPending) return;
@@ -149,7 +170,7 @@ export function ConfirmDraft({
         occurredOn: draft.occurredOn,
         categoryId: draft.categoryId,
         note: draft.note,
-        currency: draft.currency ?? "BYN",
+        accountId: account?.id,
       });
 
       if (result.status === "ok") {
@@ -238,12 +259,13 @@ export function ConfirmDraft({
           <div className="mt-5 rounded-hero bg-hero px-4 py-3.5 text-white shadow-hero">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-hero-caption">
-                Сумма
+                Сумма · {currencyLabel(currency)}
               </span>
-              <CurrencyChips
-                value={draft.currency ?? "BYN"}
-                onChange={(currency) => patch({ currency })}
-              />
+              {account && !showPicker ? (
+                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70">
+                  {account.name}
+                </span>
+              ) : null}
             </div>
             <input
               name="amount"
@@ -257,6 +279,25 @@ export function ConfirmDraft({
               aria-required
             />
           </div>
+
+          {showPicker ? (
+            <div className="mt-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-muted">
+                Счёт
+              </p>
+              <div className="mt-2.5 rounded-2xl bg-white p-3 shadow-card">
+                <AccountChips
+                  accounts={accounts}
+                  value={account?.id ?? ""}
+                  onChange={onAccountChange}
+                />
+              </div>
+              <p className="mt-1.5 px-1 text-[11px] leading-snug text-ink-muted">
+                Сумма идёт в валюте счёта: {currencyLabel(currency)}. Быстрый
+                захват (фото, голос) всегда пишет на основной счёт.
+              </p>
+            </div>
+          ) : null}
 
           {draft.kind === "expense" ? (
             <div className="mt-5">

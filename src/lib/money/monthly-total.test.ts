@@ -17,6 +17,8 @@ function expense(
     categoryDisplayName: "Продукты",
     note: null,
     channel: "manual",
+    snapshot: null,
+    accountId: null,
   };
 }
 
@@ -35,6 +37,8 @@ function income(
     categoryDisplayName: null,
     note: "Зарплата",
     channel: "manual",
+    snapshot: null,
+    accountId: null,
   };
 }
 

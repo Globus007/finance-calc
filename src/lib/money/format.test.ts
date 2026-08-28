@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatAmountBadge,
   formatByn,
   formatShortDate,
   formatUsdApprox,
-  formatUsdBadge,
 } from "./format";
 
 describe("formatByn", () => {
@@ -43,19 +43,25 @@ describe("formatUsdApprox", () => {
   });
 });
 
-describe("formatUsdBadge", () => {
+describe("formatAmountBadge", () => {
   it("shows whole-dollar originals without fraction digits", () => {
-    expect(formatUsdBadge({ originalAmount: 50, fxRate: 3.3012 })).toBe(
-      "$50 · по 3,30",
-    );
+    expect(
+      formatAmountBadge({ currency: "USD", originalAmount: 50, fxRate: 3.3012 }),
+    ).toBe("$50 · по 3,30");
   });
 
   it("shows two digits for fractional originals and grouped amounts", () => {
-    expect(formatUsdBadge({ originalAmount: 50.5, fxRate: 3.35 })).toBe(
-      "$50,50 · по 3,35",
-    );
-    expect(formatUsdBadge({ originalAmount: 1250, fxRate: 3.3012 })).toBe(
-      "$1\u00a0250 · по 3,30",
-    );
+    expect(
+      formatAmountBadge({ currency: "USD", originalAmount: 50.5, fxRate: 3.35 }),
+    ).toBe("$50,50 · по 3,35");
+    expect(
+      formatAmountBadge({ currency: "USD", originalAmount: 1250, fxRate: 3.3012 }),
+    ).toBe("$1\u00a0250 · по 3,30");
+  });
+
+  it("shows the euro symbol for EUR snapshots", () => {
+    expect(
+      formatAmountBadge({ currency: "EUR", originalAmount: 40, fxRate: 3.5 }),
+    ).toBe("€40 · по 3,50");
   });
 });

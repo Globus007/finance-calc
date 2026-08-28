@@ -16,6 +16,10 @@ describe("isAuthPublicPath", () => {
     expect(isAuthPublicPath("/api/telegram/webhook")).toBe(true);
   });
 
+  it("allows the PWA web manifest without a session", () => {
+    expect(isAuthPublicPath("/manifest.webmanifest")).toBe(true);
+  });
+
   it("treats protected app shell paths as not public", () => {
     expect(isAuthPublicPath("/")).toBe(false);
     expect(isAuthPublicPath("/month")).toBe(false);
@@ -43,6 +47,12 @@ describe("resolveAuthRedirect", () => {
     ).toBe(null);
     expect(
       resolveAuthRedirect({ pathname: "/auth/confirm", hasUser: false }),
+    ).toBe(null);
+    expect(
+      resolveAuthRedirect({
+        pathname: "/manifest.webmanifest",
+        hasUser: false,
+      }),
     ).toBe(null);
   });
 

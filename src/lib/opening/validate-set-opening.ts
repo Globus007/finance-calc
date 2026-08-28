@@ -5,7 +5,6 @@ import {
 } from "./parse-opening-amount";
 import type {
   ProductCalendar,
-  SetOpeningInput,
   SetOpeningValidation,
 } from "./types";
 
@@ -15,7 +14,7 @@ import type {
  * share this validation. Does not read the clock.
  */
 export function validateSetOpening(
-  input: SetOpeningInput,
+  input: { amount: string; openedOn: string },
   calendar: ProductCalendar,
 ): SetOpeningValidation {
   if (isNegativeOpeningAmount(input.amount)) {

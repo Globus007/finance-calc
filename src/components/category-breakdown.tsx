@@ -1,4 +1,5 @@
-import { formatByn } from "@/lib/money/format";
+import { formatByn, formatMoney } from "@/lib/money/format";
+import type { Currency } from "@/lib/fx";
 import type { CategoryBreakdownRow } from "@/lib/money/category-breakdown";
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
   emptyMessage?: string;
   /** Limit rows (e.g. Home top N). Omit for full list. */
   limit?: number;
+  /** Currency of `rows[].amount` (the viewed Account's Currency). */
+  currency?: Currency;
 };
 
 /**
@@ -23,6 +26,7 @@ export function CategoryBreakdown({
   hideTitle = false,
   emptyMessage = "Нет расходов в этом месяце",
   limit,
+  currency = "BYN",
 }: Props) {
   const visible =
     limit != null && limit > 0 ? rows.slice(0, limit) : rows;
@@ -44,6 +48,7 @@ export function CategoryBreakdown({
             <CategoryBreakdownRowItem
               key={row.categoryDisplayName}
               row={row}
+              currency={currency}
             />
           ))}
         </ul>
@@ -52,7 +57,13 @@ export function CategoryBreakdown({
   );
 }
 
-function CategoryBreakdownRowItem({ row }: { row: CategoryBreakdownRow }) {
+function CategoryBreakdownRowItem({
+  row,
+  currency,
+}: {
+  row: CategoryBreakdownRow;
+  currency: Currency;
+}) {
   const pct = Math.round(row.shareOfExpenseTotal * 1000) / 10;
   const barWidth = Math.max(row.shareOfExpenseTotal * 100, 2);
 
@@ -62,7 +73,7 @@ function CategoryBreakdownRowItem({ row }: { row: CategoryBreakdownRow }) {
         {row.categoryDisplayName}
       </p>
       <p className="text-right text-[13px] font-bold tracking-[-0.025em] tabular-nums text-expense">
-        −{formatByn(row.amount)}
+        {currency === "BYN" ? `−${formatByn(row.amount)}` : `−${formatMoney(row.amount, currency)}`}
       </p>
       <div
         className="h-1.5 min-w-0 overflow-hidden rounded-full bg-expense-soft"

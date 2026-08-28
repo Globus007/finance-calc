@@ -1,4 +1,5 @@
-import type { HistoryItem } from "./history-types";
+import type { Currency } from "@/lib/fx";
+import { nativeAmount, type HistoryItem } from "./history-types";
 
 /**
  * Fallback when a committed Expense has no Category display name on the row
@@ -12,7 +13,7 @@ export const MISSING_CATEGORY_LABEL = "Расход";
  */
 export type CategoryBreakdownRow = {
   categoryDisplayName: string;
-  /** Sum of Expense Amounts for this Category in the month (BYN, 2 dp). */
+  /** Sum of Expense Amounts for this Category in the month (2 dp). */
   amount: number;
   /** amount / expenseTotal for the month (0–1); 0 when expense total is 0. */
   shareOfExpenseTotal: number;
@@ -22,9 +23,12 @@ export type CategoryBreakdownRow = {
  * Aggregate committed Expenses by Category for a month's History items.
  * Income is ignored (no Category). Zero-spend Categories are omitted.
  * Rows sorted by amount desc, then display name (ru) for ties.
+ * `currency` is the viewed Account's Currency: BYN sums canonical amounts,
+ * a USD/EUR till sums its native snapshot figures (ADR-0014).
  */
 export function computeCategoryBreakdown(
   items: readonly HistoryItem[],
+  currency: Currency = "BYN",
 ): CategoryBreakdownRow[] {
   const totals = new Map<string, number>();
   let expenseTotal = 0;
@@ -33,8 +37,9 @@ export function computeCategoryBreakdown(
     if (item.kind !== "expense") continue;
     const name =
       item.categoryDisplayName?.trim() || MISSING_CATEGORY_LABEL;
-    expenseTotal += item.amount;
-    totals.set(name, (totals.get(name) ?? 0) + item.amount);
+    const value = nativeAmount(item, currency);
+    expenseTotal += value;
+    totals.set(name, (totals.get(name) ?? 0) + value);
   }
 
   expenseTotal = round2(expenseTotal);

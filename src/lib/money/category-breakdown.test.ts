@@ -17,6 +17,8 @@ function expense(
     categoryDisplayName,
     note: null,
     channel: "manual",
+    snapshot: null,
+    accountId: null,
   };
 }
 
@@ -31,6 +33,8 @@ function income(amount: number, id = "i1"): HistoryItem {
     categoryDisplayName: null,
     note: "Зарплата",
     channel: "manual",
+    snapshot: null,
+    accountId: null,
   };
 }
 

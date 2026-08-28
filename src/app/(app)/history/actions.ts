@@ -1,13 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type {
-  DeleteActionError,
-  EditActionError,
-} from "@/lib/money/error-messages";
+import { listAccounts } from "@/lib/accounts/load-accounts";
+import type { Account } from "@/lib/accounts/types";
+import type { DeleteActionError, EditActionError } from "@/lib/money/error-messages";
 import type { HistoryKind } from "@/lib/money/history-types";
 import type { Draft } from "@/lib/draft/types";
-import type { DraftCurrency } from "@/lib/draft/types";
 import { validateCommit } from "@/lib/draft/validate-commit";
 import { getEffectiveRate } from "@/lib/fx";
 import { createClient } from "@/lib/supabase/server";
@@ -23,6 +21,8 @@ export type DeleteRecordResult =
 /**
  * Edit form payload. Channel and kind are never taken from the client for
  * mutation of provenance — kind selects the table; channel stays as stored.
+ * `accountId` moves the record between Accounts (ADR-0014); the Amount is
+ * always typed in that Account's Currency.
  */
 export type EditRecordInput = {
   id: string;
@@ -31,8 +31,7 @@ export type EditRecordInput = {
   occurredOn: string;
   categoryId: string;
   note: string;
-  /** Typed currency; anything but USD is treated as BYN (server trust boundary). */
-  currency?: DraftCurrency;
+  accountId?: string;
 };
 
 function revalidateMoneySurfaces() {
@@ -55,8 +54,8 @@ async function requireUser() {
 
 /**
  * Edit a committed Expense or Income (not a return to Draft).
- * Amount / Occurred on / Note (+ Category for Expense); Channel and kind fixed.
- * History and Monthly total revalidate after a successful write.
+ * Amount / Occurred on / Note (+ Category for Expense, + Account); Channel and
+ * kind fixed. History, Monthly totals, and Remainders revalidate on success.
  */
 export async function editCommittedRecord(
   input: EditRecordInput,
@@ -68,6 +67,24 @@ export async function editCommittedRecord(
     return { status: "error", reason: "not_found" };
   }
 
+  const { supabase, user } = await requireUser();
+  if (!user) return { status: "error", reason: "unauthenticated" };
+
+  const existing = await loadExistingRecord(
+    supabase,
+    input.kind,
+    input.id,
+  );
+  if (existing === "error") return { status: "error", reason: "unavailable" };
+  if (!existing) return { status: "error", reason: "not_found" };
+
+  // Server trust boundary: the target Account decides the Currency.
+  const account = await resolveEditAccount(
+    input.accountId,
+    (existing.account_id as string | null) ?? null,
+  );
+  if (!account) return { status: "error", reason: "account_not_found" };
+
   // Channel is not user-editable after Commit. validateCommit only needs a
   // kind-legal stand-in so field rules run; the DB channel column is never written.
   const draft: Draft = {
@@ -77,24 +94,21 @@ export async function editCommittedRecord(
     occurredOn: input.occurredOn,
     categoryId: input.categoryId,
     note: input.note,
-    // Server trust boundary: only explicit USD counts as USD.
-    currency: input.currency === "USD" ? "USD" : "BYN",
+    accountId: account.id,
+    currency: account.currency,
   };
 
-  // async-defer-await: pure shape validation before auth / DB I/O
+  // async-defer-await: pure shape validation before rate / DB I/O
   const shapeCheck = validateCommit(draft);
   if (!shapeCheck.ok && shapeCheck.reason !== "currency_rate_unavailable") {
     return { status: "error", reason: shapeCheck.reason };
   }
 
-  const { supabase, user } = await requireUser();
-  if (!user) return { status: "error", reason: "unauthenticated" };
-
-  // Rate resolved server-side only when the save involves USD (ADR-0013):
-  // an Edit of a $ record recomputes BYN at the rate effective now.
+  // Rate resolved server-side only when the save involves a non-BYN Account
+  // (ADR-0013): an Edit recomputes BYN at the rate effective now.
   let fx: { rate: number } | null = null;
-  if (draft.currency === "USD") {
-    const effective = await getEffectiveRate();
+  if (account.currency !== "BYN") {
+    const effective = await getEffectiveRate(account.currency);
     if (!effective) {
       return { status: "error", reason: "currency_rate_unavailable" };
     }
@@ -109,29 +123,19 @@ export async function editCommittedRecord(
   const snapshotColumns = {
     currency: validation.currency,
     original_amount:
-      validation.currency === "USD" ? validation.originalAmount : null,
+      validation.currency === "BYN" ? null : validation.originalAmount,
     fx_rate: validation.fxRate,
   };
 
   if (input.kind === "expense") {
     const categoryId = validation.categoryId as string;
 
-    const [{ data: existing, error: loadError }, { data: category, error: catError }] =
-      await Promise.all([
-        supabase
-          .from("expenses")
-          .select("id, category_id")
-          .eq("id", input.id)
-          .maybeSingle(),
-        supabase
-          .from("categories")
-          .select("id, is_hidden")
-          .eq("id", categoryId)
-          .maybeSingle(),
-      ]);
+    const { data: category, error: catError } = await supabase
+      .from("categories")
+      .select("id, is_hidden")
+      .eq("id", categoryId)
+      .maybeSingle();
 
-    if (loadError) return { status: "error", reason: "unavailable" };
-    if (!existing) return { status: "error", reason: "not_found" };
     if (catError) return { status: "error", reason: "unavailable" };
     if (!category) return { status: "error", reason: "category_not_found" };
 
@@ -148,6 +152,7 @@ export async function editCommittedRecord(
     const { error } = await supabase
       .from("expenses")
       .update({
+        account_id: account.id,
         amount: validation.amount,
         ...snapshotColumns,
         occurred_on: validation.occurredOn,
@@ -169,18 +174,10 @@ export async function editCommittedRecord(
     return { status: "ok" };
   }
 
-  const { data: existing, error: loadError } = await supabase
-    .from("incomes")
-    .select("id")
-    .eq("id", input.id)
-    .maybeSingle();
-
-  if (loadError) return { status: "error", reason: "unavailable" };
-  if (!existing) return { status: "error", reason: "not_found" };
-
   const { error } = await supabase
     .from("incomes")
     .update({
+      account_id: account.id,
       amount: validation.amount,
       ...snapshotColumns,
       occurred_on: validation.occurredOn,
@@ -224,4 +221,44 @@ export async function deleteCommittedRecord(
 
   revalidateMoneySurfaces();
   return { status: "ok" };
+}
+
+type ExistingRecord = { id: string; category_id?: string; account_id?: string | null };
+
+/** Loads the row's immutable fields (Category / Account) for Edit checks. */
+async function loadExistingRecord(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  kind: "expense" | "income",
+  id: string,
+): Promise<ExistingRecord | null | "error"> {
+  const select =
+    kind === "expense" ? "id, category_id, account_id" : "id, account_id";
+
+  const { data, error } = await supabase
+    .from(kind === "expense" ? "expenses" : "incomes")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .select(select as any)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) return "error";
+  return (data as ExistingRecord | null) ?? null;
+}
+
+/**
+ * Account an Edit writes to: the picked one (must belong to this owner), or
+ * the record's current Account when the form sent nothing.
+ */
+async function resolveEditAccount(
+  inputAccountId: string | undefined,
+  currentAccountId: string | null,
+): Promise<Account | null> {
+  const accounts = await listAccounts();
+  if (inputAccountId) {
+    return accounts.find((a) => a.id === inputAccountId) ?? null;
+  }
+  if (currentAccountId) {
+    return accounts.find((a) => a.id === currentAccountId) ?? null;
+  }
+  return accounts.find((a) => a.isDefault) ?? null;
 }

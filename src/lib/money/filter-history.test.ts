@@ -5,7 +5,7 @@ import {
   hasActiveHistoryFilters,
   type HistoryFilters,
 } from "./filter-history";
-import type { HistoryItem } from "./history-types";
+import type { HistoryEntry, HistoryItem, TransferItem } from "./history-types";
 
 function expense(
   partial: Partial<HistoryItem> & Pick<HistoryItem, "id">,
@@ -19,6 +19,8 @@ function expense(
     categoryDisplayName: "Продукты",
     note: null,
     channel: "manual",
+    snapshot: null,
+    accountId: "acc-byn",
     ...partial,
   };
 }
@@ -35,6 +37,25 @@ function income(
     categoryDisplayName: null,
     note: "Зарплата",
     channel: "manual",
+    snapshot: null,
+    accountId: "acc-byn",
+    ...partial,
+  };
+}
+
+function transfer(
+  partial: Partial<TransferItem> & Pick<TransferItem, "id">,
+): TransferItem {
+  return {
+    kind: "transfer",
+    occurredOn: "2026-08-04",
+    createdAt: "2026-08-04T12:00:00.000Z",
+    note: null,
+    amount: 33,
+    convertedAmount: 10,
+    fxRate: 0.303,
+    sourceAccountId: "acc-byn",
+    targetAccountId: "acc-usd",
     ...partial,
   };
 }
@@ -49,9 +70,10 @@ const catalog = [
   }),
   income({ id: "i-salary", occurredOn: "2026-08-03", note: "Зарплата" }),
   income({ id: "i-gift", occurredOn: "2026-07-15", note: "Подарок" }),
+  transfer({ id: "t-cash", occurredOn: "2026-08-06" }),
 ];
 
-function ids(items: HistoryItem[]): string[] {
+function ids(items: HistoryEntry[]): string[] {
   return items.map((i) => i.id);
 }
 
@@ -78,6 +100,27 @@ describe("filterHistory", () => {
     ]);
   });
 
+  it("keeps only Transfers when kind is transfer", () => {
+    expect(ids(filterHistory(catalog, filters({ kind: "transfer" })))).toEqual([
+      "t-cash",
+    ]);
+  });
+
+  it("a Category filter drops Incomes and Transfers (neither has a Category)", () => {
+    expect(
+      ids(filterHistory(catalog, filters({ categoryId: "cat-food" }))),
+    ).toEqual(["e-food"]);
+  });
+
+  it("an Account filter keeps that Account's records and both Transfer endpoints", () => {
+    expect(
+      ids(filterHistory(catalog, filters({ accountId: "acc-usd" }))),
+    ).toEqual(["t-cash"]);
+    expect(
+      ids(filterHistory(catalog, filters({ accountId: "acc-byn" }))),
+    ).toEqual(["e-food", "e-transport", "i-salary", "i-gift", "t-cash"]);
+  });
+
   it("when a Category is selected, keeps matching Expenses and excludes Incomes", () => {
     expect(
       ids(filterHistory(catalog, filters({ categoryId: "cat-food" }))),
@@ -98,7 +141,7 @@ describe("filterHistory", () => {
   it("filters by Occurred on from (inclusive)", () => {
     expect(
       ids(filterHistory(catalog, filters({ from: "2026-08-03" }))),
-    ).toEqual(["e-transport", "i-salary"]);
+    ).toEqual(["e-transport", "i-salary", "t-cash"]);
   });
 
   it("filters by Occurred on to (inclusive)", () => {
@@ -121,7 +164,7 @@ describe("filterHistory", () => {
   });
 
   it("combines kind, category, and date range", () => {
-    const mixed: HistoryItem[] = [
+    const mixed: HistoryEntry[] = [
       ...catalog,
       expense({
         id: "e-food-old",

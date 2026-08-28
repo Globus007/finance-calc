@@ -3,16 +3,22 @@ import type { Opening } from "./types";
 
 /**
  * Live Remainder from Opening + already-filtered committed totals.
- * Absent Opening → null (not 0). Totals must exclude Drafts and any
- * record whose Occurred on is before the Opening date.
+ * Absent Opening → null (not 0). Totals must exclude Drafts, Monthly-only
+ * figures, and any record whose Occurred on / moved on is before the
+ * Opening date. Transfer in/out are in the Account's Currency (source
+ * Amount out, target converted Amount in).
  */
 export function remainderFromTotals(
   opening: Opening | null,
   incomeTotal: number,
   expenseTotal: number,
+  transferIn: number = 0,
+  transferOut: number = 0,
 ): number | null {
   if (opening === null) return null;
-  return round2(opening.amount + incomeTotal - expenseTotal);
+  return round2(
+    opening.amount + incomeTotal - expenseTotal + transferIn - transferOut,
+  );
 }
 
 /**

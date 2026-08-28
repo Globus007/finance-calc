@@ -1,17 +1,14 @@
-import type { HistoryItem } from "./history-types";
+import type { HistoryEntry } from "./history-types";
 
 /**
- * Mixed History: committed Expenses + Incomes ordered by Occurred on DESC,
- * then createdAt DESC as tie-break (ADR-0006).
+ * Mixed History: committed Expenses, Incomes, and Transfers ordered by
+ * Occurred on DESC, then createdAt DESC as tie-break (ADR-0006 / ADR-0014).
  */
-export function mergeHistory(
-  expenses: HistoryItem[],
-  incomes: HistoryItem[],
-): HistoryItem[] {
-  return [...expenses, ...incomes].sort(compareHistory);
+export function mergeHistory(entries: HistoryEntry[]): HistoryEntry[] {
+  return [...entries].sort(compareHistory);
 }
 
-function compareHistory(a: HistoryItem, b: HistoryItem): number {
+export function compareHistory(a: HistoryEntry, b: HistoryEntry): number {
   // Occurred on DESC (YYYY-MM-DD lexicographic = chronological).
   if (a.occurredOn !== b.occurredOn) {
     return a.occurredOn < b.occurredOn ? 1 : -1;
